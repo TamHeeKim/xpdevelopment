@@ -1,3 +1,4 @@
+using UnityEngine.InputSystem;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -33,6 +34,9 @@ namespace FishingPrototype
             go.transform.SetParent(Camera.main.transform, false);
             go.transform.localPosition = new Vector3(4.7f, 4.72f, 10f);
             healthText = go.AddComponent<TextMesh>();
+            healthText.font = PrototypeBootstrap.KoreanFont;
+            healthText.GetComponent<MeshRenderer>().sharedMaterial = PrototypeBootstrap.KoreanFont.material;
+            healthText.GetComponent<MeshRenderer>().enabled = false;
             healthText.anchor = TextAnchor.UpperRight;
             healthText.alignment = TextAlignment.Right;
             healthText.fontSize = 42;
@@ -43,6 +47,7 @@ namespace FishingPrototype
         }
 
         public void SetCheckpoint(Vector2 point) => checkpoint = point;
+        public void Heal() { Health = MaxHealth; RefreshHud(); }
 
         public void ReceiveDamage(float damage, Vector2 knockback)
         {
@@ -50,6 +55,7 @@ namespace FishingPrototype
             Health = Mathf.Max(0f, Health - damage);
             body.AddForce(knockback, ForceMode2D.Impulse);
             CameraShake.Pulse(Mathf.Clamp01(damage / 30f));
+            GetComponent<PlayerAppearance>()?.Flash();
             StartCoroutine(HitFlash());
             RefreshHud();
             if (Health <= 0f) StartCoroutine(Recover());
@@ -65,6 +71,9 @@ namespace FishingPrototype
         private IEnumerator Recover()
         {
             recovering = true;
+            FindFirstObjectByType<FishingRodController>()?.Interrupt();
+            GetComponent<PlayerController>().ControlsLocked = true;
+            var poison = GetComponent<PoisonStatus>(); if (poison) poison.Until = 0;
             body.simulated = false;
             visual.enabled = false;
             yield return new WaitForSeconds(0.8f);
@@ -74,12 +83,14 @@ namespace FishingPrototype
             Health = MaxHealth;
             visual.enabled = true;
             recovering = false;
+            GetComponent<PlayerController>().ControlsLocked = false;
+            FindFirstObjectByType<StageDirector>().ResetEncounter();
             RefreshHud();
         }
 
         private void RefreshHud()
         {
-            if (healthText) healthText.text = "HP  " + Mathf.CeilToInt(Health) + " / " + Mathf.CeilToInt(MaxHealth);
+            if (healthText) healthText.text = "체력  " + Mathf.CeilToInt(Health) + " / " + Mathf.CeilToInt(MaxHealth);
         }
     }
 
@@ -123,6 +134,7 @@ namespace FishingPrototype
         private void FixedUpdate()
         {
             if (!player || !body.simulated || hookable.IsHooked) return;
+            if (hookable.IsThrown) { windingUp = false; return; }
 
             Vector2 delta = player.Body.position - body.position;
             float direction = Mathf.Sign(delta.x);
@@ -166,147 +178,6 @@ namespace FishingPrototype
         }
     }
 
-    public sealed class AnywhereFishingController : MonoBehaviour
-    {
-        private enum FishingState { Ready, Timing, Cooldown }
-
-        public PlayerController Player;
-        public FishingRodController Rod;
-
-        private FishingState state;
-        private TextMesh prompt;
-        private float startedAt;
-        private float cooldownUntil;
-        private float messageUntil;
-
-        public void Initialize(PlayerController player, FishingRodController rod)
-        {
-            Player = player;
-            Rod = rod;
-            CreateHud();
-        }
-
-        private void CreateHud()
-        {
-            GameObject textObject = new GameObject("Fishing Prompt");
-            textObject.transform.SetParent(Camera.main.transform, false);
-            textObject.transform.localPosition = new Vector3(0f, -3.65f, 10f);
-            prompt = textObject.AddComponent<TextMesh>();
-            prompt.anchor = TextAnchor.MiddleCenter;
-            prompt.alignment = TextAlignment.Center;
-            prompt.fontSize = 42;
-            prompt.characterSize = 0.052f;
-            prompt.color = new Color(0.45f, 0.9f, 1f);
-            prompt.GetComponent<MeshRenderer>().sortingOrder = 125;
-        }
-
-        private void Update()
-        {
-            if (!Player || !Rod) return;
-
-            if (state == FishingState.Cooldown && Time.time >= cooldownUntil) state = FishingState.Ready;
-
-            if (state == FishingState.Ready)
-            {
-                prompt.text = Time.time < messageUntil
-                    ? prompt.text
-                    : "SPACE: FISH ANYWHERE WHILE STANDING ON THE PLATFORM";
-                if (Input.GetKeyDown(KeyCode.Space))
-                {
-                    if (!Player.Grounded)
-                    {
-                        ShowMessage("LAND ON THE PLATFORM BEFORE FISHING");
-                        return;
-                    }
-                    if (!Rod.CanStartFishing)
-                    {
-                        ShowMessage("FINISH THE CURRENT WHIP OR RELEASE THE HOOK FIRST");
-                        return;
-                    }
-                    state = FishingState.Timing;
-                    startedAt = Time.time;
-                    SetFishingLock(true);
-                }
-                return;
-            }
-
-            if (state == FishingState.Cooldown)
-            {
-                if (Time.time >= messageUntil)
-                    prompt.text = "CATCH ATTACHED  |  SPACE: RE-FISH ANYWHERE";
-                return;
-            }
-
-            if (!Player.Grounded)
-            {
-                CancelFishing("FISHING CANCELLED  |  KEEP YOUR FOOTING");
-                return;
-            }
-
-            if (Time.time - startedAt > 6f)
-            {
-                CancelFishing("THE FISH GOT AWAY  |  SPACE TO TRY AGAIN");
-                return;
-            }
-
-            float marker = Mathf.PingPong((Time.time - startedAt) * 10f, 20f);
-            int markerIndex = Mathf.Clamp(Mathf.RoundToInt(marker), 0, 20);
-            char[] bar = "-------=====---------".ToCharArray();
-            bar[markerIndex] = '|';
-            prompt.text = "PRESS SPACE ONCE IN THE CENTER\n[" + new string(bar) + "]";
-
-            if (!Input.GetKeyDown(KeyCode.Space)) return;
-            if (marker >= 7f && marker <= 13f)
-            {
-                CompleteCatch(marker >= 9f && marker <= 11f);
-            }
-            else
-            {
-                startedAt = Time.time;
-            }
-        }
-
-        private void CompleteCatch(bool perfectCenter)
-        {
-            FishingRodController.CatchType result = perfectCenter
-                ? FishingRodController.CatchType.HeavyObject
-                : FishingRodController.CatchType.Fish;
-            Rod.AttachCatch(result);
-            prompt.text = result == FishingRodController.CatchType.HeavyObject
-                ? "HEAVY OBJECT CAUGHT!\nGROUND + HOLD LMB = ANCHOR SWING"
-                : "FISH CAUGHT!\nFASTER THAN HEAVY, STRONGER THAN EMPTY";
-            state = FishingState.Cooldown;
-            cooldownUntil = Time.time + 2.8f;
-            messageUntil = cooldownUntil;
-            SetFishingLock(false);
-        }
-
-        private void CancelFishing(string message)
-        {
-            state = FishingState.Ready;
-            ShowMessage(message);
-            SetFishingLock(false);
-        }
-
-        private void ShowMessage(string message)
-        {
-            prompt.text = message;
-            messageUntil = Time.time + 1.8f;
-        }
-
-        private void SetFishingLock(bool locked)
-        {
-            Player.ControlsLocked = locked;
-            Rod.ControlsLocked = locked;
-        }
-
-        private void OnDisable()
-        {
-            if (Player) Player.ControlsLocked = false;
-            if (Rod) Rod.ControlsLocked = false;
-        }
-    }
-
     public sealed class StageDirector : MonoBehaviour
     {
         public PlayerController Player;
@@ -316,83 +187,144 @@ namespace FishingPrototype
         private readonly List<HookableBody> waveTwo = new List<HookableBody>();
         private GameObject combatGate;
         private GameObject finishGate;
-        private AnywhereFishingController fishing;
+
+        public string ObjectiveText => objective ? objective.text : "";
         private TextMesh objective;
         private bool waveOneStarted;
         private bool waveOneCleared;
         private bool catchReady;
         private bool waveTwoStarted;
         private bool stageComplete;
+        private bool firstSpawnComplete, secondSpawnComplete;
+        private GameObject spawnWarning;
 
         private void Start()
         {
             combatGate = CreateGate("Combat Gate", 10.5f, new Color(0.85f, 0.25f, 0.22f));
             finishGate = CreateGate("Finish Gate", 36.5f, new Color(0.74f, 0.24f, 0.78f));
-            CreateAnywhereFishing();
+
+            for (int i = 0; i < 3; i++)
+            {
+                var bottle = PrototypeBootstrap.CreateHookable("호리병", new Vector2(i * 12f, -1.5f), new Vector2(0.5f, 0.8f), Color.cyan, HookableBody.BodyKind.Prop, 1f, 500f, false);
+                bottle.AddComponent<PoisonBottle>();
+            }
             CreateObjectiveHud();
-            SetObjective("MOVE RIGHT  >  FIRST COMBAT");
+            if (PlayerPrefs.GetInt("TangCheckpoint", 0) == 1)
+            {
+                waveOneStarted = waveOneCleared = catchReady = true;
+                combatGate.SetActive(false);
+                Player.transform.position = new Vector2(14f, -1.15f);
+                Player.GetComponent<PlayerHealth>().SetCheckpoint(Player.transform.position);
+            }
+            SetObjective("시작 지점·첫 전투 다음 휴식 구간에서 E: 저장·회복  |  F9: 불러오기");
         }
 
         private void Update()
         {
+            if ((Keyboard.current?.eKey.wasPressedThisFrame ?? false) &&
+                (Player.transform.position.x < -5f || (waveOneCleared && Mathf.Abs(Player.transform.position.x - 14f) < 2f)))
+            {
+                bool second = waveOneCleared && Player.transform.position.x > 10f;
+                catchReady = second;
+                Vector2 point = new Vector2(second ? 14f : -8f, -1.15f);
+                Player.GetComponent<PlayerHealth>().SetCheckpoint(point);
+                Player.GetComponent<PlayerHealth>().Heal();
+                PlayerPrefs.SetInt("TangCheckpoint", second ? 1 : 0);
+                PlayerPrefs.Save();
+                SetObjective("저장·회복 완료  |  오른쪽으로 이동하세요");
+            }
             if (!waveOneStarted && Player.transform.position.x > -4.5f)
             {
                 waveOneStarted = true;
-                waveOne.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Rusher, new Vector2(3f, -1.1f)));
-                waveOne.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Rusher, new Vector2(6f, -1.1f)));
-                waveOne.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Bruiser, new Vector2(8.3f, -0.9f)));
-                SetObjective("WAVE 1  |  WHIP, CAPTURE, THROW");
+                StartCoroutine(SpawnEncounter(waveOne, false));
             }
 
-            if (waveOneStarted && !waveOneCleared && AllDefeated(waveOne))
+            if (waveOneStarted && firstSpawnComplete && !waveOneCleared && AllDefeated(waveOne))
             {
                 waveOneCleared = true;
                 combatGate.SetActive(false);
-                SetObjective("WAVE 1 CLEAR  |  SPACE: FISH ANYWHERE");
+                SetObjective("첫 번째 전투 완료  |  오른쪽 휴식 구간에서 E: 저장·회복");
             }
 
-            if (waveOneCleared && !catchReady && Rod.HasCatch)
-            {
-                catchReady = true;
-                Player.GetComponent<PlayerHealth>().SetCheckpoint(Player.transform.position);
-                SetObjective("CATCH EQUIPPED  |  MOVE RIGHT FOR WAVE 2");
-            }
-
-            if (catchReady && !waveTwoStarted && Player.transform.position.x > 20.5f)
+            if (waveOneCleared && !waveTwoStarted && Player.transform.position.x > 20.5f)
             {
                 waveTwoStarted = true;
-                waveTwo.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Bruiser, new Vector2(25f, -0.9f)));
-                waveTwo.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Rusher, new Vector2(28f, -1.1f)));
-                waveTwo.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Rusher, new Vector2(31f, -1.1f)));
-                waveTwo.Add(SpawnEnemy(EnemyCombatAI.EnemyType.Bruiser, new Vector2(34f, -0.9f)));
-                SetObjective("WAVE 2  |  TEST THE CATCHED WEIGHT");
+                StartCoroutine(SpawnEncounter(waveTwo, true));
             }
 
-            if (waveTwoStarted && !stageComplete && AllDefeated(waveTwo))
+            if (waveTwoStarted && secondSpawnComplete && !stageComplete && AllDefeated(waveTwo))
             {
                 stageComplete = true;
                 finishGate.SetActive(false);
-                SetObjective("STAGE CLEAR  |  R TO RESTART AND TRY ANOTHER CATCH");
+                SetObjective("구간 완료  |  R: 저장 지점부터 다시 시작");
             }
+        }
+
+        public void ResetEncounter()
+        {
+            StopAllCoroutines();
+            if (spawnWarning) Destroy(spawnWarning);
+            firstSpawnComplete = secondSpawnComplete = false;
+            foreach (var enemy in waveOne) if (enemy) Destroy(enemy.gameObject);
+            foreach (var enemy in waveTwo) if (enemy) Destroy(enemy.gameObject);
+            waveOne.Clear(); waveTwo.Clear();
+            foreach (var cloud in FindObjectsByType<PoisonCloud>(FindObjectsSortMode.None)) Destroy(cloud.gameObject);
+            foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) Destroy(star.gameObject);
+            waveTwoStarted = stageComplete = false; finishGate.SetActive(true);
+            if (!catchReady) { waveOneStarted = waveOneCleared = false; combatGate.SetActive(true); }
+            SetObjective("재도전  |  오른쪽으로 이동하세요");
+        }
+
+        public static float ChooseSpawnX(float playerX, bool second)
+        {
+            float left = second ? 23f : 1.5f, right = second ? 34f : 8.5f;
+            return Mathf.Abs(playerX-left) >= Mathf.Abs(playerX-right) ? left : right;
+        }
+        private IEnumerator SpawnEncounter(List<HookableBody> wave, bool second)
+        {
+            int total = second ? 6 : 4;
+            for (int i = 0; i < total; i++)
+            {
+                // Keep the arena readable: at most three living enemies at a time.
+                while (LivingCount(wave) >= 3) yield return new WaitForSeconds(0.3f);
+                float x = ChooseSpawnX(Player.transform.position.x, second);
+                spawnWarning = PrototypeBootstrap.CreateVisual("적 등장 예고", new Vector2(x, -1.95f), new Vector2(1.5f,0.12f), new Color(1f,0.55f,0.2f));
+                SetObjective((second ? "두 번째 전투" : "첫 번째 전투") + " · 적 접근 중  " + (i+1) + "/" + total);
+                yield return new WaitForSeconds(1.2f);
+                // Re-warn if the player moved onto the spawn point during the telegraph.
+                while (Mathf.Abs(Player.transform.position.x-x) < 2.5f)
+                {
+                    x=ChooseSpawnX(Player.transform.position.x,second);
+                    spawnWarning.transform.position=new Vector2(x,-1.95f);
+                    yield return new WaitForSeconds(1.2f);
+                }
+                bool heavy = second ? i%3==2 : i==3;
+                wave.Add(SpawnEnemy(heavy?EnemyCombatAI.EnemyType.Bruiser:EnemyCombatAI.EnemyType.Rusher,new Vector2(x,heavy?-.9f:-1.1f)));
+                Destroy(spawnWarning); spawnWarning=null;
+                SetObjective((second?"두 번째 전투":"첫 번째 전투")+" · 남은 적 "+(LivingCount(wave)+total-i-1));
+                if(i+1<total) yield return new WaitForSeconds(i%2==1?3f:1f);
+            }
+            if(second) secondSpawnComplete=true; else firstSpawnComplete=true;
+        }
+        private static int LivingCount(List<HookableBody> wave)
+        {
+            int count=0; foreach(var enemy in wave) if(enemy && enemy.Body.simulated) count++;
+            return count;
         }
 
         private HookableBody SpawnEnemy(EnemyCombatAI.EnemyType type, Vector2 position)
         {
             bool bruiser = type == EnemyCombatAI.EnemyType.Bruiser;
             Color color = bruiser ? new Color(0.62f, 0.22f, 0.75f) : new Color(0.92f, 0.22f, 0.18f);
-            GameObject enemy = PrototypeBootstrap.CreateHookable(bruiser ? "Bruiser" : "Rusher", position,
+            GameObject enemy = PrototypeBootstrap.CreateHookable(bruiser ? "무거운 적" : "일반 적", position,
                 bruiser ? new Vector2(1.35f, 2.15f) : new Vector2(0.85f, 1.65f), color,
                 HookableBody.BodyKind.Enemy, bruiser ? 3.4f : 1.15f, bruiser ? 150f : 72f, false);
-            EnemyCombatAI ai = enemy.AddComponent<EnemyCombatAI>();
-            ai.Configure(type, Player, color);
+            enemy.GetComponent<Rigidbody2D>().freezeRotation = true;
+            CombatShapes.DressEnemy(enemy, bruiser);
+            TangEnemyAI ai = enemy.AddComponent<TangEnemyAI>();
+            ai.Player = Player;
+            foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) star.ConfigureEnemy(enemy.GetComponent<Collider2D>());
             return enemy.GetComponent<HookableBody>();
-        }
-
-        private void CreateAnywhereFishing()
-        {
-            GameObject point = new GameObject("Anywhere Fishing");
-            fishing = point.AddComponent<AnywhereFishingController>();
-            fishing.Initialize(Player, Rod);
         }
 
         private static GameObject CreateGate(string name, float x, Color color)
@@ -409,6 +341,9 @@ namespace FishingPrototype
             go.transform.SetParent(Camera.main.transform, false);
             go.transform.localPosition = new Vector3(0f, 3.85f, 10f);
             objective = go.AddComponent<TextMesh>();
+            objective.font = PrototypeBootstrap.KoreanFont;
+            objective.GetComponent<MeshRenderer>().sharedMaterial = PrototypeBootstrap.KoreanFont.material;
+            objective.GetComponent<MeshRenderer>().enabled = false;
             objective.anchor = TextAnchor.UpperCenter;
             objective.alignment = TextAlignment.Center;
             objective.fontSize = 46;

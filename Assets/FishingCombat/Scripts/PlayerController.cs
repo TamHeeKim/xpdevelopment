@@ -1,3 +1,4 @@
+using UnityEngine.InputSystem;
 using UnityEngine;
 
 namespace FishingPrototype
@@ -26,15 +27,15 @@ namespace FishingPrototype
                 lastJumpTime = -10f;
                 return;
             }
-            moveInput = Input.GetAxisRaw("Horizontal");
-            if (Input.GetKeyDown(KeyCode.W)) lastJumpTime = Time.time;
+            moveInput = (((Keyboard.current?.dKey.isPressed ?? false) || (Keyboard.current?.rightArrowKey.isPressed ?? false)) ? 1f : 0f) - (((Keyboard.current?.aKey.isPressed ?? false) || (Keyboard.current?.leftArrowKey.isPressed ?? false)) ? 1f : 0f);
+            if ((Keyboard.current?.wKey.wasPressedThisFrame ?? false)) lastJumpTime = Time.time;
         }
 
         private void FixedUpdate()
         {
             if (ControlsLocked) return;
             if (!PreserveHorizontalMomentum)
-                Body.linearVelocity = new Vector2(moveInput * MoveSpeed, Body.linearVelocity.y);
+                Body.linearVelocity = new Vector2(moveInput * MoveSpeed * (GetComponent<PoisonStatus>() && Time.time < GetComponent<PoisonStatus>().Until ? 0.6f : 1f), Body.linearVelocity.y);
             else
                 Body.AddForce(Vector2.right * moveInput * 4f);
             if (Time.time - lastJumpTime < 0.12f && IsGrounded())

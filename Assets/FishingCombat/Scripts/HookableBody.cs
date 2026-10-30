@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace FishingPrototype
@@ -14,7 +15,12 @@ namespace FishingPrototype
         public bool RespawnOnDeath = true;
         public Rigidbody2D Body { get; private set; }
         public bool IsHooked { get; private set; }
+        public float ThrowDamageDuration = 2f;
+        private float thrownUntil = float.NegativeInfinity;
+        public bool IsThrown => !respawning && Time.time < thrownUntil;
+        private readonly Dictionary<int, float> impactTimes = new Dictionary<int, float>();
 
+        public float HealthFraction => Mathf.Clamp01(health / Mathf.Max(1f, MaxHealth));
         private float health;
         private SpriteRenderer visual;
         private Vector2 spawnPosition;
@@ -22,6 +28,8 @@ namespace FishingPrototype
         private TextMesh label;
         private Coroutine flashRoutine;
         private bool respawning;
+        private Collider2D hookedPlayerCollider;
+        private bool playerCollisionWasIgnored;
 
         private void Awake()
         {
@@ -40,6 +48,9 @@ namespace FishingPrototype
             go.transform.localPosition = new Vector3(0f, 0.72f, 0f);
             go.transform.localScale = new Vector3(1f / transform.localScale.x, 1f / transform.localScale.y, 1f);
             label = go.AddComponent<TextMesh>();
+            label.font = PrototypeBootstrap.KoreanFont;
+            label.GetComponent<MeshRenderer>().sharedMaterial = PrototypeBootstrap.KoreanFont.material;
+            label.GetComponent<MeshRenderer>().enabled = false;
             label.anchor = TextAnchor.LowerCenter;
             label.alignment = TextAlignment.Center;
             label.fontSize = 42;
@@ -51,6 +62,25 @@ namespace FishingPrototype
 
         public void SetHooked(bool value)
         {
+            if (value) { thrownUntil = float.NegativeInfinity; impactTimes.Clear(); }
+            else if (IsHooked && !respawning) thrownUntil = Time.time + ThrowDamageDuration;
+            if (value) GetComponent<Shuriken>()?.Reflect();
+            var hitbox = GetComponent<Collider2D>();
+            if (value && !IsHooked && hitbox)
+            {
+                var player = FindFirstObjectByType<PlayerController>();
+                hookedPlayerCollider = player ? player.GetComponent<Collider2D>() : null;
+                if (hookedPlayerCollider)
+                {
+                    playerCollisionWasIgnored = Physics2D.GetIgnoreCollision(hitbox, hookedPlayerCollider);
+                    Physics2D.IgnoreCollision(hitbox, hookedPlayerCollider, true);
+                }
+            }
+            else if (!value && hookedPlayerCollider)
+            {
+                if (hitbox) Physics2D.IgnoreCollision(hitbox, hookedPlayerCollider, playerCollisionWasIgnored);
+                hookedPlayerCollider = null;
+            }
             IsHooked = value;
             RefreshLabel();
         }
@@ -68,6 +98,7 @@ namespace FishingPrototype
 
         public void ReceiveDamage(float damage, Vector2 hitPoint)
         {
+            if (Kind == BodyKind.Prop || respawning || damage <= 0f) return;
             health -= damage;
             RefreshLabel();
             if (flashRoutine != null) StopCoroutine(flashRoutine);
@@ -75,10 +106,28 @@ namespace FishingPrototype
             if (health <= 0f && !respawning) StartCoroutine(Respawn());
         }
 
+        private void FixedUpdate()
+        {
+            if (Kind != BodyKind.Prop || IsHooked || GetComponent<Shuriken>() || Body.position.y >= -12f) return;
+            Body.position = spawnPosition;
+            Body.rotation = spawnRotation.eulerAngles.z;
+            Body.linearVelocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            thrownUntil = float.NegativeInfinity;
+            impactTimes.Clear();
+        }
+
         private void OnCollisionEnter2D(Collision2D collision)
         {
             float speed = collision.relativeVelocity.magnitude;
-            if (speed < 4.5f || !IsHooked) return;
+            if (speed < 4.5f || (!IsHooked && !IsThrown) || respawning) return;
+            if (collision.collider.GetComponent<PlayerController>()) return;
+            HookableBody partner = collision.collider.GetComponent<HookableBody>();
+            int key = partner ? partner.GetInstanceID() : collision.collider.GetInstanceID();
+            if (impactTimes.TryGetValue(key, out float last) && Time.time - last < 0.1f) return;
+            impactTimes[key] = Time.time;
+            // Both collision callbacks describe one impact, so record it on both bodies before damage.
+            if (partner) partner.impactTimes[GetInstanceID()] = Time.time;
 
             float damage = (speed - 4.5f) * Body.mass * 2.4f;
             ReceiveDamage(damage, collision.GetContact(0).point);
@@ -100,8 +149,10 @@ namespace FishingPrototype
         private IEnumerator Respawn()
         {
             respawning = true;
-            IsHooked = false;
-            visual.enabled = false;
+            thrownUntil = float.NegativeInfinity;
+            impactTimes.Clear();
+            SetHooked(false);
+            foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = false;
             GetComponent<Collider2D>().enabled = false;
             Body.simulated = false;
             if (!RespawnOnDeath)
@@ -116,17 +167,19 @@ namespace FishingPrototype
             Body.linearVelocity = Vector2.zero;
             Body.angularVelocity = 0f;
             health = MaxHealth;
-            visual.enabled = true;
+            foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = true;
             GetComponent<Collider2D>().enabled = true;
             respawning = false;
             RefreshLabel();
         }
 
+        public void SetDisplayName(string value) { gameObject.name = value; RefreshLabel(); }
+
         private void RefreshLabel()
         {
             if (!label) return;
-            string type = Kind == BodyKind.Enemy ? "ENEMY" : "THROWABLE ROCK";
-            label.text = type + "  " + Mathf.CeilToInt(Mathf.Max(0f, health)) + (IsHooked ? "  [HOOKED]" : "");
+            string type = gameObject.name;
+            label.text = type + "  " + Mathf.CeilToInt(Mathf.Max(0f, health)) + (IsHooked ? "  [포획 중]" : "");
         }
     }
 }

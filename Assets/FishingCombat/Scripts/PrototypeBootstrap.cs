@@ -1,3 +1,4 @@
+using UnityEngine.InputSystem;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,13 +6,14 @@ namespace FishingPrototype
 {
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
+        public static Font KoreanFont => Resources.Load<Font>("KoreanUI");
         private static Sprite whiteSprite;
         private static bool isQuitting;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreatePrototype()
         {
-            if (isQuitting || FindFirstObjectByType<PrototypeBootstrap>() != null) return;
+            if (SceneManager.GetActiveScene().name != "FishingPrototype" || isQuitting || FindFirstObjectByType<PrototypeBootstrap>() != null) return;
             new GameObject("Fishing Prototype").AddComponent<PrototypeBootstrap>().Build();
         }
 
@@ -28,7 +30,7 @@ namespace FishingPrototype
             GameObject player = CreatePlayer(new Vector2(-8f, -1.15f));
             FishingRodController rod = CreateFishingRod(player);
 
-            CreateHookable("Throwable Rock", new Vector2(-1f, -1.55f), new Vector2(0.8f, 0.8f),
+            CreateHookable("던지는 돌", new Vector2(-1f, -1.55f), new Vector2(0.8f, 0.8f),
                 new Color(0.42f, 0.47f, 0.52f), HookableBody.BodyKind.Prop, 3.2f, 160f, true);
 
             GameObject directorObject = new GameObject("Stage Director");
@@ -36,13 +38,22 @@ namespace FishingPrototype
             director.Player = player.GetComponent<PlayerController>();
             director.Rod = rod;
 
-            CreateInstructions();
+            gameObject.AddComponent<CombatHud>();
         }
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.R))
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            if ((Keyboard.current?.rKey.wasPressedThisFrame ?? false) || (Keyboard.current?.f9Key.wasPressedThisFrame ?? false))
+                Reload();
+        }
+
+        private static void Reload()
+        {
+#if UNITY_EDITOR
+            UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(SceneManager.GetActiveScene().path, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+#endif
         }
 
         private static void CreateCamera()
@@ -51,6 +62,7 @@ namespace FishingPrototype
             GameObject go = existing ? existing.gameObject : new GameObject("Main Camera");
             Camera cam = existing ? existing : go.AddComponent<Camera>();
             go.tag = "MainCamera";
+            if (!go.GetComponent<AudioListener>()) go.AddComponent<AudioListener>();
             go.transform.position = new Vector3(0f, 0.5f, -10f);
             cam.orthographic = true;
             cam.orthographicSize = 5.2f;
@@ -91,7 +103,7 @@ namespace FishingPrototype
 
         private static GameObject CreatePlayer(Vector2 position)
         {
-            GameObject player = CreateVisual("Player", position, new Vector2(0.85f, 1.55f), new Color(0.2f, 0.72f, 0.95f));
+            GameObject player = CreateVisual("낚시꾼", position, new Vector2(0.85f, 1.55f), new Color(0.2f, 0.72f, 0.95f));
             Rigidbody2D rb = player.AddComponent<Rigidbody2D>();
             rb.mass = 1.2f;
             rb.freezeRotation = true;
@@ -100,13 +112,15 @@ namespace FishingPrototype
             col.size = new Vector2(0.9f, 1f);
             PlayerController controller = player.AddComponent<PlayerController>();
             player.AddComponent<PlayerHealth>();
+            player.AddComponent<PlayerAppearance>();
             Camera.main.GetComponent<SmoothCameraFollow>().Target = player.transform;
 
             GameObject rod = CreateVisual("Rod", position, new Vector2(1.25f, 0.09f), new Color(0.93f, 0.74f, 0.31f));
             rod.transform.SetParent(player.transform, false);
             rod.transform.localPosition = new Vector3(0.52f, 0.28f, 0f);
-            rod.GetComponent<SpriteRenderer>().sortingOrder = 3;
+            rod.GetComponent<SpriteRenderer>().sortingOrder = 7;
             controller.RodVisual = rod.transform;
+            CombatShapes.DressRod(rod);
             return player;
         }
 
@@ -133,24 +147,6 @@ namespace FishingPrototype
             HookableBody hookable = body.AddComponent<HookableBody>();
             hookable.Configure(kind, color, maxHealth, respawn);
             return body;
-        }
-
-        private static void CreateInstructions()
-        {
-            GameObject go = new GameObject("Instructions");
-            go.transform.SetParent(Camera.main.transform, false);
-            go.transform.localPosition = new Vector3(-4.85f, 4.75f, 10f);
-            TextMesh text = go.AddComponent<TextMesh>();
-            text.anchor = TextAnchor.UpperLeft;
-            text.alignment = TextAlignment.Left;
-            text.fontSize = 42;
-            text.characterSize = 0.045f;
-            text.color = new Color(0.9f, 0.95f, 1f);
-            text.text = "FISHING ROD COMBAT DEMO\nA / D  Move     W  Jump     Mouse  Aim\n" +
-                        "LMB  Tap: whip  Hold: capture  Release: throw\nRMB  Reel hooked target\n" +
-                        "SPACE  Fish anywhere, anytime     R  Reset\n" +
-                        "HEAVY CATCH: aim at ground + hold LMB to anchor swing";
-            go.GetComponent<MeshRenderer>().sortingOrder = 100;
         }
 
         public static GameObject CreateVisual(string name, Vector2 position, Vector2 scale, Color color)

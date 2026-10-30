@@ -1,3 +1,4 @@
+using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,46 +6,56 @@ namespace FishingPrototype
 {
     public sealed class FishingRodController : MonoBehaviour
     {
-        private enum RodState { Idle, Whipping, Returning, Hooked, GroundAnchored }
-        public enum CatchType { None, Fish, HeavyObject }
+        private enum RodState { Idle, Whipping, Returning, Hooked }
 
         public PlayerController Player;
         public Transform RodVisual;
 
-        [Header("Tuning")]
+        [Header("기본 조정")]
         public float IdleLength = 1.65f;
         public float MaxWhipLength = 7.5f;
-        public float SwingForce = 34f;
+        public float SwingForce = 27f;
         public float ReelForce = 42f;
-        public float GroundSwingForce = 48f;
 
-        public CatchType CurrentCatch { get; private set; }
-        public bool HasCatch => CurrentCatch != CatchType.None;
+        [Header("대상 보정")]
+        public float AssistRadius = 7f;
+        public float ThrowAssistAngle = 55f;
+        public float SlamGestureSpeed = 0.8f;
+        public float SlamAssistDuration = 0.35f;
+        private HookableBody slamTarget;
+        private float slamUntil, nextSlam;
+
         public bool ControlsLocked { get; set; }
-        public bool CanStartFishing => state == RodState.Idle;
 
+        private HookableBody charging;
+        private float charge;
+        private LineRenderer outline;
+        public float CaptureProgress => charging ? Mathf.Clamp01(charge / 0.8f) : 0f;
+        public string HeldName => hooked ? hooked.gameObject.name : "";
+        public string EquipmentName => "기본 낚시찌";
+        public float CaptureHoldTime = 0.18f;
+        private float heldSince = float.PositiveInfinity;
+        private float bufferedAttackUntil = float.NegativeInfinity;
+        private HookableBody captureCandidate;
+        private float candidateUntil;
         private RodState state;
         private Rigidbody2D tipBody;
         private CircleCollider2D tipCollider;
-        private GameObject weightVisual;
-        private GameObject fishVisual;
         private LineRenderer line;
         private LineRenderer strikeLine;
         private HookableBody hooked;
         private Vector2 aim = Vector2.right;
+        private float rodFacing = 1f;
         private float ropeLength = 4f;
         private float whipStarted;
         private float whipProgress;
         private float whipSide = 1f;
         private Vector2 whipAim = Vector2.right;
         private Vector2 tipVelocity;
-        private bool heavyWeight;
-        private Vector2 groundAnchor;
-        private float groundRopeLength;
         private readonly HashSet<int> hitThisWhip = new HashSet<int>();
         private const int LinePoints = 24;
-        private const int AttackSamples = 8;
-        private const float AttackStart = 0.58f;
+        private const int AttackSamples = LinePoints;
+        private const float AttackStart = 0f;
         private readonly Vector2[] previousAttackPoints = new Vector2[AttackSamples];
         private readonly Vector2[] currentAttackPoints = new Vector2[AttackSamples];
 
@@ -52,47 +63,102 @@ namespace FishingPrototype
         {
             CreateTip();
             CreateLine();
-            AttachCatch(CatchType.None);
+            var marker = new GameObject("Aim outline"); marker.transform.SetParent(transform);
+            outline = marker.AddComponent<LineRenderer>(); outline.material = line.material;
+            outline.positionCount = 5; outline.startWidth = outline.endWidth = 0.04f;
+            outline.startColor = outline.endColor = Color.cyan;
         }
 
         private void Update()
         {
-            UpdateAim();
             UpdateRodVisual();
+            UpdateAim();
+            var cursor = Camera.main.ScreenToWorldPoint(Mouse.current != null ? (Vector3)Mouse.current.position.ReadValue() : Vector3.zero);
+            var hover = Physics2D.OverlapPoint(cursor);
+            var hovered = hover ? hover.GetComponent<HookableBody>() : null;
+            outline.enabled = hovered && hovered.Kind == HookableBody.BodyKind.Enemy;
+            if (outline.enabled)
+            {
+                var b = hover.bounds; float pad = 0.08f;
+                outline.SetPosition(0, new Vector3(b.min.x-pad,b.min.y-pad)); outline.SetPosition(1,new Vector3(b.min.x-pad,b.max.y+pad));
+                outline.SetPosition(2,new Vector3(b.max.x+pad,b.max.y+pad)); outline.SetPosition(3,new Vector3(b.max.x+pad,b.min.y-pad)); outline.SetPosition(4,outline.GetPosition(0));
+            }
+            if (charging)
+            {
+                if (!(Mouse.current?.leftButton.isPressed ?? false) || !charging.Body.simulated || Vector2.Distance(RodAnchor, charging.Body.position) > MaxWhipLength) { charging = null; charge = 0; state = RodState.Returning; tipBody.bodyType = RigidbodyType2D.Dynamic; }
+                else { charge += Time.deltaTime; if (charge >= 0.8f) { var target = charging; charging = null; Hook(target); } }
+            }
 
             if (ControlsLocked)
             {
+                bufferedAttackUntil = float.NegativeInfinity;
+                captureCandidate = null;
+                heldSince = float.PositiveInfinity;
                 DrawLine();
                 return;
             }
 
-            if (Input.GetMouseButtonDown(0))
+            if ((Mouse.current?.leftButton.wasPressedThisFrame ?? false))
             {
-                if (state != RodState.Hooked && state != RodState.GroundAnchored) StartWhip();
+                heldSince = Time.time;
+                if (state == RodState.Idle && !charging) StartWhip();
+                else if ((state == RodState.Whipping || state == RodState.Returning) && !charging)
+                    bufferedAttackUntil = Time.time + 0.25f;
             }
 
-            if (Input.GetMouseButtonUp(0) && state == RodState.Hooked)
+            if (Mouse.current?.leftButton.wasReleasedThisFrame ?? false)
             {
-                ReleaseHook();
+                heldSince = float.PositiveInfinity;
+                captureCandidate = null;
+            }
+            if ((Mouse.current?.leftButton.wasReleasedThisFrame ?? false) && state == RodState.Hooked)
+            {
+                ReleaseHook(true);
                 state = RodState.Returning;
             }
-            else if (Input.GetMouseButtonUp(0) && state == RodState.GroundAnchored)
-            {
-                ReleaseGroundAnchor();
-            }
 
+            if (state == RodState.Hooked && hooked && hooked.Body.simulated &&
+                !(Mouse.current?.rightButton.isPressed ?? false) && Time.time >= nextSlam && Time.deltaTime > 0f)
+            {
+                Vector2 movement = Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
+                if (-movement.y / Mathf.Max(1f, Screen.height) / Time.deltaTime >= SlamGestureSpeed &&
+                    -movement.y > Mathf.Abs(movement.x))
+                {
+                    slamTarget = FindAssistTarget(true);
+                    if (slamTarget)
+                    {
+                        slamUntil = Time.time + SlamAssistDuration;
+                        nextSlam = Time.time + 0.65f;
+                    }
+                }
+            }
             DrawLine();
         }
 
         private void FixedUpdate()
         {
+            if (ControlsLocked) return;
+            if (state == RodState.Idle && Time.time <= bufferedAttackUntil) StartWhip();
+            if (captureCandidate && (state == RodState.Whipping || state == RodState.Returning) && !charging)
+            {
+                if (!captureCandidate.Body.simulated || Time.time > candidateUntil ||
+                    Vector2.Distance(RodAnchor, captureCandidate.Body.position) > MaxWhipLength ||
+                    !HasClearPath(RodAnchor, captureCandidate.Body.position)) captureCandidate = null;
+                else if ((Mouse.current?.leftButton.isPressed ?? false) && Time.time - heldSince >= CaptureHoldTime)
+                {
+                    var target = captureCandidate; captureCandidate = null;
+                    bufferedAttackUntil = float.NegativeInfinity;
+                    if (target.Kind == HookableBody.BodyKind.Enemy && target.Body.mass >= 3f) { charging = target; charge = 0; }
+                    else Hook(target);
+                }
+            }
+            if (charging) { tipBody.position = charging.Body.position; return; }
             switch (state)
             {
                 case RodState.Idle: UpdateIdle(); break;
                 case RodState.Whipping: UpdateWhip(); break;
                 case RodState.Returning: UpdateReturn(); break;
                 case RodState.Hooked: UpdateHooked(); break;
-                case RodState.GroundAnchored: UpdateGroundAnchor(); break;
             }
         }
 
@@ -100,7 +166,7 @@ namespace FishingPrototype
         {
             Camera cam = Camera.main;
             if (!cam) return;
-            Vector3 mouse = cam.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 mouse = cam.ScreenToWorldPoint((Vector3)(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero));
             Vector2 delta = (Vector2)mouse - RodAnchor;
             if (delta.sqrMagnitude > 0.02f) aim = delta.normalized;
         }
@@ -108,20 +174,16 @@ namespace FishingPrototype
         private void UpdateRodVisual()
         {
             if (!RodVisual) return;
-            Vector2 direction = aim;
-            if (state == RodState.Whipping)
-            {
-                float turn = Mathf.SmoothStep(-38f * whipSide, 24f * whipSide,
-                    Mathf.Clamp01(whipProgress / 0.72f));
-                direction = Rotate(whipAim, turn);
-            }
-            RodVisual.right = direction;
+            if (Mathf.Abs(Player.Body.linearVelocity.x) > 0.2f) rodFacing = Mathf.Sign(Player.Body.linearVelocity.x);
+            RodVisual.localPosition = new Vector3(0.52f * rodFacing, 0.28f, 0f);
+            RodVisual.localRotation = Quaternion.Euler(0f, 0f, 35f * rodFacing);
             Vector3 scale = RodVisual.localScale;
-            scale.y = Mathf.Abs(scale.y) * (direction.x < 0f ? -1f : 1f);
+            scale.x = Mathf.Abs(scale.x) * rodFacing;
+            scale.y = Mathf.Abs(scale.y);
             RodVisual.localScale = scale;
         }
 
-        private Vector2 RodAnchor => (Vector2)Player.transform.position + new Vector2(0f, 0.28f) + aim * 0.55f;
+        private Vector2 RodAnchor => RodVisual ? (Vector2)RodVisual.TransformPoint(Vector3.right * 0.5f) : (Vector2)Player.transform.position;
 
         private void CreateTip()
         {
@@ -140,16 +202,6 @@ namespace FishingPrototype
             relay.Owner = this;
             Physics2D.IgnoreCollision(tipCollider, Player.GetComponent<Collider2D>());
 
-            weightVisual = PrototypeBootstrap.CreateVisual("Heavy Sinker", Vector2.zero, Vector2.one * 3.1f,
-                new Color(0.16f, 0.19f, 0.22f));
-            weightVisual.transform.SetParent(tip.transform, false);
-            weightVisual.GetComponent<SpriteRenderer>().sortingOrder = 4;
-
-            fishVisual = PrototypeBootstrap.CreateVisual("Caught Fish", Vector2.zero, new Vector2(3.5f, 1.7f),
-                new Color(0.25f, 0.78f, 0.94f));
-            fishVisual.transform.SetParent(tip.transform, false);
-            fishVisual.transform.localRotation = Quaternion.Euler(0f, 0f, -18f);
-            fishVisual.GetComponent<SpriteRenderer>().sortingOrder = 4;
         }
 
         private void CreateLine()
@@ -178,21 +230,12 @@ namespace FishingPrototype
             strikeLine.enabled = false;
         }
 
-        public void AttachCatch(CatchType type)
-        {
-            if (state == RodState.Hooked) ReleaseHook();
-            if (state == RodState.GroundAnchored) ReleaseGroundAnchor();
-            CurrentCatch = type;
-            heavyWeight = type == CatchType.HeavyObject;
-            if (weightVisual) weightVisual.SetActive(type == CatchType.HeavyObject);
-            if (fishVisual) fishVisual.SetActive(type == CatchType.Fish);
-            if (tipBody) tipBody.mass = type == CatchType.HeavyObject ? 3.8f : type == CatchType.Fish ? 1.3f : 0.45f;
-            if (tipCollider) tipCollider.radius = type == CatchType.HeavyObject ? 2.15f : type == CatchType.Fish ? 1.55f : 1.1f;
-            if (line) line.startWidth = type == CatchType.HeavyObject ? 0.075f : type == CatchType.Fish ? 0.065f : 0.055f;
-        }
-
         private void StartWhip()
         {
+            // Repeated presses may queue an attack, but never rewind an active swing.
+            if (state != RodState.Idle || charging) return;
+            bufferedAttackUntil = float.NegativeInfinity;
+            captureCandidate = null;
             state = RodState.Whipping;
             whipStarted = Time.time;
             whipProgress = 0f;
@@ -214,14 +257,14 @@ namespace FishingPrototype
 
         private void UpdateWhip()
         {
-            float duration = heavyWeight ? 0.58f : CurrentCatch == CatchType.Fish ? 0.48f : 0.42f;
+            float duration = 0.42f;
             whipProgress = Mathf.Clamp01((Time.time - whipStarted) / duration);
 
             // Slow wind-up followed by a fast expanding arc creates the whip crack.
-            float travel = Mathf.Pow(whipProgress, heavyWeight ? 1.45f : 1.72f);
+            float travel = Mathf.Pow(whipProgress, 1.72f);
             float angle = Mathf.Lerp(-95f * whipSide, 8f * whipSide, Mathf.SmoothStep(0f, 1f, travel));
             float extension = Mathf.Sin(whipProgress * Mathf.PI * 0.5f);
-            float reachScale = heavyWeight ? 0.9f : CurrentCatch == CatchType.Fish ? 0.95f : 1f;
+            float reachScale = 1f;
             float reach = Mathf.Lerp(0.85f, MaxWhipLength * reachScale, extension);
             Vector2 previous = tipBody.position;
             Vector2 next = RodAnchor + Rotate(whipAim, angle) * reach;
@@ -243,9 +286,16 @@ namespace FishingPrototype
 
         private void UpdateReturn()
         {
+            // 휘두르기는 끝까지 실행하고, 다음 공격은 회수를 기다리지 않는다.
+            if (Time.time <= bufferedAttackUntil)
+            {
+                state = RodState.Idle;
+                StartWhip();
+                return;
+            }
             Vector2 delta = RodAnchor + aim * 0.55f - tipBody.position;
-            tipBody.AddForce(delta * (heavyWeight ? 34f : 48f) * tipBody.mass);
-            tipBody.linearVelocity *= heavyWeight ? 0.94f : 0.9f;
+            tipBody.AddForce(delta * 48f * tipBody.mass);
+            tipBody.linearVelocity *= 0.9f;
             if (delta.magnitude < 0.65f)
             {
                 tipBody.linearVelocity = Vector2.zero;
@@ -263,12 +313,23 @@ namespace FishingPrototype
                 return;
             }
 
-            if (Input.GetMouseButton(1))
+            if ((Mouse.current?.rightButton.isPressed ?? false))
                 ropeLength = Mathf.Max(1.25f, ropeLength - 3.8f * Time.fixedDeltaTime);
 
+            if (!(Mouse.current?.rightButton.isPressed ?? false)) ropeLength = Mathf.Min(MaxWhipLength, ropeLength + 3.8f * Time.fixedDeltaTime);
             Rigidbody2D targetBody = hooked.Body;
             Vector2 anchor = RodAnchor;
             Vector2 desired = anchor + aim * ropeLength;
+            if ((Mouse.current?.rightButton.isPressed ?? false)) slamTarget = null;
+            if (slamTarget && slamTarget.Body.simulated && Time.time < slamUntil &&
+                Vector2.Distance(anchor, slamTarget.Body.position) <= Mathf.Min(AssistRadius, ropeLength) &&
+                HasClearPath(targetBody.position, slamTarget.Body.position))
+            {
+                // Aim at the upper surface; the existing physical collision deals damage to both bodies.
+                Bounds bounds = slamTarget.GetComponent<Collider2D>().bounds;
+                desired = new Vector2(bounds.center.x, bounds.max.y - 0.15f);
+            }
+            else slamTarget = null;
             Vector2 towardDesired = desired - targetBody.position;
             targetBody.AddForce(towardDesired * SwingForce * targetBody.mass);
 
@@ -276,27 +337,11 @@ namespace FishingPrototype
             if (fromAnchor.magnitude > ropeLength)
                 targetBody.AddForce(-fromAnchor.normalized * (fromAnchor.magnitude - ropeLength) * 95f * targetBody.mass);
 
-            if (Input.GetMouseButton(1))
+            if ((Mouse.current?.rightButton.isPressed ?? false))
                 targetBody.AddForce((anchor - targetBody.position).normalized * ReelForce * targetBody.mass);
 
             Player.Body.AddForce(-towardDesired * 0.08f);
             tipBody.position = targetBody.position;
-        }
-
-        private void UpdateGroundAnchor()
-        {
-            tipBody.position = groundAnchor;
-            Vector2 fromAnchor = Player.Body.position - groundAnchor;
-            if (fromAnchor.sqrMagnitude < 0.1f) return;
-
-            Vector2 radial = fromAnchor.normalized;
-            Vector2 tangent = new Vector2(-radial.y, radial.x);
-            float desiredDirection = Mathf.Abs(aim.x) > 0.2f ? Mathf.Sign(aim.x) : 1f;
-            if (Mathf.Sign(tangent.x) != desiredDirection) tangent = -tangent;
-
-            float stretch = Mathf.Max(0f, fromAnchor.magnitude - groundRopeLength);
-            Player.Body.AddForce(-radial * (38f + stretch * 95f));
-            Player.Body.AddForce(tangent * GroundSwingForce);
         }
 
         public void HandleTipContact(Collider2D other)
@@ -304,13 +349,12 @@ namespace FishingPrototype
             if (state != RodState.Whipping) return;
             HookableBody target = other.GetComponent<HookableBody>();
             if (target) HitTarget(target, 1f);
-            else if (heavyWeight && Input.GetMouseButton(0) && other.GetComponent<GroundSurface>())
-                PlantGroundAnchor(other);
+
         }
 
         private void SweepWhipCurve()
         {
-            float radius = heavyWeight ? 0.42f : 0.2f;
+            float radius = 0.2f;
             for (int i = 0; i < AttackSamples; i++)
             {
                 float ropeT = Mathf.Lerp(AttackStart, 1f, i / (AttackSamples - 1f));
@@ -351,32 +395,39 @@ namespace FishingPrototype
 
         private void HitTarget(HookableBody target, float ropeT)
         {
-            if (!target) return;
+            if (!target || !target.Body.simulated || state != RodState.Whipping || charging) return;
 
             if (hitThisWhip.Add(target.GetInstanceID()))
             {
                 float speed = tipVelocity.magnitude;
                 float tipStrength = Mathf.Lerp(0.45f, 1f, Mathf.InverseLerp(AttackStart, 1f, ropeT));
-                float catchDamage = heavyWeight ? 1.65f : CurrentCatch == CatchType.Fish ? 1.25f : 1f;
-                float maxDamage = heavyWeight ? 70f : CurrentCatch == CatchType.Fish ? 46f : 34f;
+                float catchDamage = 1f;
+                float maxDamage = 34f;
                 float damage = Mathf.Clamp((speed - 4f) * 1.15f * tipStrength * catchDamage, 4f, maxDamage);
                 target.ReceiveDamage(damage, tipBody.position);
                 CameraShake.Pulse(Mathf.Clamp01(damage / 55f));
                 Vector2 hitDirection = tipVelocity.sqrMagnitude > 0.1f ? tipVelocity.normalized : whipAim;
-                float catchKnockback = heavyWeight ? 0.55f : CurrentCatch == CatchType.Fish ? 0.32f : 0.22f;
+                float catchKnockback = 0.22f;
                 target.Body.AddForce(hitDirection * damage * tipStrength * catchKnockback, ForceMode2D.Impulse);
             }
 
-            // Attacking is forgiving, but capture still requires the very end of the rope.
-            if (state == RodState.Whipping && !heavyWeight && ropeT >= 0.88f &&
-                Input.GetMouseButton(0) && whipProgress > 0.42f)
-                Hook(target);
+            // Any actual strike-zone contact can lead into capture during a continuous hold.
+            if (target.Body.simulated && (Mouse.current?.leftButton.isPressed ?? false) && !captureCandidate)
+            {
+                captureCandidate = target;
+                candidateUntil = Time.time + 0.3f;
+            }
         }
 
         private void Hook(HookableBody target)
         {
             hooked = target;
             hooked.SetHooked(true);
+            CameraShake.Pulse(0.15f);
+            var sound = AudioClip.Create("Capture", 2205, 1, 22050, false);
+            var samples = new float[2205];
+            for (int i = 0; i < samples.Length; i++) samples[i] = Mathf.Sin(i * 0.18f) * 0.1f * (1f - i / 2205f);
+            sound.SetData(samples, 0); AudioSource.PlayClipAtPoint(sound, Camera.main.transform.position); Destroy(sound, 1f);
             ropeLength = Mathf.Clamp(Vector2.Distance(RodAnchor, target.Body.position), 1.5f, MaxWhipLength);
             target.Body.linearVelocity += tipVelocity * 0.24f;
             state = RodState.Hooked;
@@ -385,53 +436,80 @@ namespace FishingPrototype
             tipBody.position = target.Body.position;
         }
 
-        private void ReleaseHook()
+        private void ReleaseHook(bool assist = false)
         {
             if (hooked)
             {
+                if (assist && hooked.Body.simulated)
+                {
+                    HookableBody target = FindAssistTarget(false);
+                    if (target)
+                        hooked.Body.linearVelocity = CombatAimAssist.RedirectThrow(hooked.Body.linearVelocity,
+                            target.Body.position - hooked.Body.position, ThrowAssistAngle);
+                }
                 tipBody.position = hooked.Body.position;
                 tipBody.linearVelocity = hooked.Body.linearVelocity * 0.35f;
                 hooked.SetHooked(false);
             }
             hooked = null;
+            slamTarget = null;
             tipBody.bodyType = RigidbodyType2D.Dynamic;
         }
 
-        private void PlantGroundAnchor(Collider2D ground)
+        private HookableBody FindAssistTarget(bool forSlam)
         {
-            groundAnchor = ground.ClosestPoint(tipBody.position);
-            groundRopeLength = Mathf.Clamp(Vector2.Distance(Player.Body.position, groundAnchor), 2f, MaxWhipLength);
-            state = RodState.GroundAnchored;
-            Player.PreserveHorizontalMomentum = true;
-            tipBody.bodyType = RigidbodyType2D.Kinematic;
-            tipBody.position = groundAnchor;
-
-            Vector2 radial = (Player.Body.position - groundAnchor).normalized;
-            Vector2 tangent = new Vector2(-radial.y, radial.x);
-            float desiredDirection = Mathf.Abs(aim.x) > 0.2f ? Mathf.Sign(aim.x) : 1f;
-            if (Mathf.Sign(tangent.x) != desiredDirection) tangent = -tangent;
-            Player.Body.linearVelocity = tangent * 8.5f + Vector2.up * 2.6f;
-            CameraShake.Pulse(0.35f);
+            if (!hooked) return null;
+            HookableBody best = null;
+            float bestScore = float.PositiveInfinity;
+            Vector2 origin = hooked.Body.position;
+            Vector2 velocity = hooked.Body.linearVelocity;
+            foreach (var col in Physics2D.OverlapCircleAll(Player.Body.position, AssistRadius))
+            {
+                HookableBody candidate = col.GetComponent<HookableBody>();
+                if (!candidate || candidate == hooked || candidate.Kind != HookableBody.BodyKind.Enemy ||
+                    !candidate.Body.simulated || candidate.IsHooked) continue;
+                Vector2 offset = candidate.Body.position - origin;
+                if (forSlam)
+                {
+                    if (offset.y >= -0.25f || Vector2.Distance(RodAnchor, candidate.Body.position) > ropeLength) continue;
+                }
+                else if (!CombatAimAssist.CanRedirect(velocity, offset, ThrowAssistAngle)) continue;
+                if (!HasClearPath(origin, candidate.Body.position)) continue;
+                float score = forSlam ? offset.sqrMagnitude : Vector2.Angle(velocity, offset);
+                if (score < bestScore || (score == bestScore && best && candidate.GetInstanceID() < best.GetInstanceID()))
+                {
+                    best = candidate;
+                    bestScore = score;
+                }
+            }
+            return best;
         }
 
-        private void ReleaseGroundAnchor()
+        private bool HasClearPath(Vector2 from, Vector2 to)
         {
-            Player.PreserveHorizontalMomentum = false;
-            tipBody.bodyType = RigidbodyType2D.Dynamic;
-            tipBody.position = groundAnchor;
-            tipBody.linearVelocity = Player.Body.linearVelocity * 0.2f;
-            state = RodState.Returning;
+            foreach (var hit in Physics2D.LinecastAll(from, to))
+                if (!hit.collider.isTrigger && hit.rigidbody != Player.Body &&
+                    !hit.collider.GetComponent<HookableBody>()) return false;
+            return true;
         }
 
+        public void Interrupt()
+        {
+            captureCandidate = null;
+            bufferedAttackUntil = float.NegativeInfinity;
+            heldSince = float.PositiveInfinity;
+            if (charging) { charging = null; charge = 0; state = RodState.Returning; tipBody.bodyType = RigidbodyType2D.Dynamic; }
+            if (state == RodState.Hooked) { ReleaseHook(); state = RodState.Returning; }
+        }
         private void DrawLine()
         {
             if (!line || !tipBody) return;
             Vector2 start = RodAnchor;
             Vector2 end = state == RodState.Hooked && hooked ? hooked.Body.position :
-                state == RodState.GroundAnchored ? groundAnchor : tipBody.position;
+                tipBody.position;
             float distance = Vector2.Distance(start, end);
             float slack = state == RodState.Hooked ? Mathf.Max(0f, ropeLength - distance) : 0.1f;
-            float sag = 0.08f + slack * 0.35f + (heavyWeight ? 0.12f : 0f);
+            float sag = 0.08f + slack * 0.35f;
             Vector2 control = Vector2.Lerp(start, end, 0.5f) + Vector2.down * sag;
             if (state == RodState.Whipping)
                 control = GetWhipControl(start, end);
