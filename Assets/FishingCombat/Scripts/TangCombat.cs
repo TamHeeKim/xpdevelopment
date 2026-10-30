@@ -3,14 +3,16 @@ namespace FishingPrototype
 {
     public sealed class PoisonStatus : MonoBehaviour
     {
-        public float Until;
+        [UnityEngine.Serialization.FormerlySerializedAs("Until")]
+        [Header("독 상태")]
+        public float until;
         float nextTick;
         void Update()
         {
-            if (Time.time >= Until) return;
+            if (Time.time >= until) return;
             if (Time.time >= nextTick) { nextTick = Time.time + 0.5f; GetComponent<PlayerHealth>().ReceiveDamage(3f, Vector2.zero); }
         }
-        public void Apply() { Until = Time.time + 2f; }
+        public void Apply() { until = Time.time + 2f; }
     }
     public sealed class PoisonCloud : MonoBehaviour
     {
@@ -20,7 +22,7 @@ namespace FishingPrototype
         readonly System.Collections.Generic.HashSet<HookableBody> damaged = new System.Collections.Generic.HashSet<HookableBody>();
         public static void Spawn(Vector2 position, bool damagesEnemies = false)
         {
-            var go = PrototypeBootstrap.CreateVisual(damagesEnemies ? "반격 독연기" : "독가스", position,
+            var go = PrototypeBootstrap.CreateVisual(damagesEnemies ? "Effect_CounterPoisonCloud" : "Effect_PoisonCloud", position,
                 new Vector2(3f, 2f), new Color(0.3f, 0.85f, 0.2f, 0.35f));
             var cloud = go.AddComponent<PoisonCloud>();
             cloud.damagesEnemies = damagesEnemies;
@@ -43,7 +45,7 @@ namespace FishingPrototype
             }
             for (int i = 0; i < 6; i++)
             {
-                var puff = new GameObject("보라색 연기");
+                var puff = new GameObject("Sprite_PurpleSmoke");
                 puff.transform.SetParent(transform, false);
                 var sprite = puff.AddComponent<SpriteRenderer>();
                 sprite.sprite = smokeSprite;
@@ -76,7 +78,7 @@ namespace FishingPrototype
                 foreach (var col in Physics2D.OverlapCircleAll(transform.position, 2f))
                 {
                     var target = col.GetComponent<HookableBody>();
-                    if (target && target.Kind == HookableBody.BodyKind.Enemy && target.Body.simulated && damaged.Add(target))
+                    if (target && target.kind == HookableBody.BodyKind.Enemy && target.Body.simulated && damaged.Add(target))
                         target.ReceiveDamage(8f, transform.position);
                 }
                 return;
@@ -94,7 +96,7 @@ namespace FishingPrototype
     public sealed class PoisonBottle : MonoBehaviour
     {
         public bool Filled { get; private set; }
-        public void Fill() { Filled = true; GetComponent<HookableBody>().SetDisplayName("독가스 호리병"); GetComponent<HookableBody>().BaseColor = Color.green; GetComponent<SpriteRenderer>().color = Color.green; }
+        public void Fill() { Filled = true; GetComponent<HookableBody>().SetDisplayNameKey("object.poison_bottle"); GetComponent<HookableBody>().baseColor = Color.green; GetComponent<SpriteRenderer>().color = Color.green; }
         void OnCollisionEnter2D(Collision2D hit)
         {
             var body = GetComponent<HookableBody>();
@@ -114,7 +116,7 @@ namespace FishingPrototype
         {
             body = GetComponent<HookableBody>(); hitbox = GetComponent<Collider2D>();
             foreach (var target in FindObjectsByType<HookableBody>(FindObjectsSortMode.None))
-                if (target.Kind == HookableBody.BodyKind.Enemy) ConfigureEnemy(target.GetComponent<Collider2D>());
+                if (target.kind == HookableBody.BodyKind.Enemy) ConfigureEnemy(target.GetComponent<Collider2D>());
             foreach (var other in FindObjectsByType<Shuriken>(FindObjectsSortMode.None))
                 if (other != this) Physics2D.IgnoreCollision(hitbox, other.GetComponent<Collider2D>(), true);
         }
@@ -124,7 +126,7 @@ namespace FishingPrototype
             if (returned) return;
             returned = true;
             foreach (var target in FindObjectsByType<HookableBody>(FindObjectsSortMode.None))
-                if (target.Kind == HookableBody.BodyKind.Enemy) ConfigureEnemy(target.GetComponent<Collider2D>());
+                if (target.kind == HookableBody.BodyKind.Enemy) ConfigureEnemy(target.GetComponent<Collider2D>());
             var player = FindFirstObjectByType<PlayerController>();
             if (player) Physics2D.IgnoreCollision(hitbox, player.GetComponent<Collider2D>(), true);
         }
@@ -140,16 +142,19 @@ namespace FishingPrototype
             var player = hit.collider.GetComponent<PlayerHealth>();
             var enemy = hit.collider.GetComponent<HookableBody>();
             if (!returned && player) { player.ReceiveDamage(12f, new Vector2(Mathf.Sign(body.Body.linearVelocity.x) * 3f, 1f)); Destroy(gameObject); }
-            else if (returned && enemy && enemy.Kind == HookableBody.BodyKind.Enemy) { enemy.ReceiveDamage(30f, transform.position); Destroy(gameObject); }
+            else if (returned && enemy && enemy.kind == HookableBody.BodyKind.Enemy) { enemy.ReceiveDamage(30f, transform.position); Destroy(gameObject); }
             else if (!enemy && !player) Destroy(gameObject);
         }
     }
     public sealed class TangEnemyAI : MonoBehaviour
     {
-        public PlayerController Player;
+        [UnityEngine.Serialization.FormerlySerializedAs("Player")]
+        [Header("연결")]
+        public PlayerController player;
         [Header("독가스")]
         [Tooltip("플레이어가 이 반경 안에 들어오면 2초간 접근한 뒤 독가스를 뿌립니다.")]
-        public float PoisonTriggerRadius = 4f;
+        [UnityEngine.Serialization.FormerlySerializedAs("PoisonTriggerRadius")]
+        public float poisonTriggerRadius = 4f;
         HookableBody body;
         float until, cooldown, poisonCooldown;
         int state;
@@ -157,7 +162,7 @@ namespace FishingPrototype
         void Start() { body = GetComponent<HookableBody>(); }
         void FixedUpdate()
         {
-            if (!Player || !body.Body.simulated || !Player.Body.simulated) return;
+            if (!player || !body.Body.simulated || !player.Body.simulated) return;
             if (body.IsHooked || body.IsThrown)
             {
                 state = 0;
@@ -165,7 +170,7 @@ namespace FishingPrototype
                 poisonCooldown = Mathf.Max(poisonCooldown, cooldown);
                 return;
             }
-            Vector2 delta = Player.Body.position - body.Body.position;
+            Vector2 delta = player.Body.position - body.Body.position;
             float distance = Mathf.Abs(delta.x);
             if (Mathf.Abs(delta.x) > 0.05f) direction = Mathf.Sign(delta.x);
             if (state == 1)
@@ -179,18 +184,18 @@ namespace FishingPrototype
                 Move(0);
                 if (Time.time >= until)
                 {
-                    var go = PrototypeBootstrap.CreateHookable("수리검", body.Body.position + Vector2.right * direction, Vector2.one * 0.55f, Color.yellow, HookableBody.BodyKind.Prop, 0.5f, 1000f, false);
+                    var go = PrototypeBootstrap.CreateHookable("Projectile_Shuriken", body.Body.position + Vector2.right * direction, Vector2.one * 0.55f, Color.yellow, HookableBody.BodyKind.Prop, 0.5f, 1000f, false, "object.shuriken");
                     CombatShapes.DressShuriken(go);
                     go.GetComponent<Rigidbody2D>().gravityScale = 0;
                     go.GetComponent<Rigidbody2D>().linearVelocity = Vector2.right * direction * 7f;
                     go.AddComponent<Shuriken>();
                     state = 0; cooldown = Time.time + 1.5f;
-                    GetComponent<SpriteRenderer>().color = body.BaseColor;
+                    GetComponent<SpriteRenderer>().color = body.baseColor;
                 }
                 return;
             }
             if (distance > 12f) { Move(0); return; }
-            if (delta.sqrMagnitude <= PoisonTriggerRadius * PoisonTriggerRadius && Time.time >= poisonCooldown)
+            if (delta.sqrMagnitude <= poisonTriggerRadius * poisonTriggerRadius && Time.time >= poisonCooldown)
             {
                 state = 1;
                 until = Time.time + 2f;

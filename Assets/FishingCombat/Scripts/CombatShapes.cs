@@ -31,14 +31,14 @@ namespace FishingPrototype
         }
         static void Part(Transform root,string name,Sprite sprite,Vector2 position,Vector2 size,Color color,int layer=2)
         {
-            var go=new GameObject(name);go.transform.SetParent(root,false);go.transform.localPosition=position;go.transform.localScale=size;
+            var go=new GameObject("Sprite_" + name.Replace(" ", ""));go.transform.SetParent(root,false);go.transform.localPosition=position;go.transform.localScale=size;
             var visual=go.AddComponent<SpriteRenderer>();visual.sprite=sprite;visual.color=color;visual.sortingOrder=layer;
         }
         public static void DressEnemy(GameObject enemy,bool heavy)
         {
             Init(); var visual=enemy.GetComponent<SpriteRenderer>();visual.sprite=torso;
             Color robe=heavy?new Color(.25f,.16f,.36f):new Color(.12f,.29f,.27f);
-            visual.color=robe;enemy.GetComponent<HookableBody>().BaseColor=robe;
+            visual.color=robe;enemy.GetComponent<HookableBody>().baseColor=robe;
             Part(enemy.transform,"두건",head,new Vector2(0,.34f),new Vector2(.7f,.4f),new Color(.09f,.12f,.17f));
             Part(enemy.transform,"눈가",rectangle,new Vector2(0,.36f),new Vector2(.38f,.055f),new Color(.92f,.73f,.53f),3);
             Part(enemy.transform,"눈",rectangle,new Vector2(.1f,.36f),new Vector2(.055f,.035f),Color.black,4);
@@ -51,7 +51,7 @@ namespace FishingPrototype
         public static Transform DressPlayer(GameObject player)
         {
             Init();
-            var group = new GameObject("낚시꾼 외형").transform; group.SetParent(player.transform,false);
+            var group = new GameObject("Model_Fisher").transform; group.SetParent(player.transform,false);
             player.GetComponent<SpriteRenderer>().sprite = null;
             Part(group,"셔츠",torso,new Vector2(0,-.02f),new Vector2(.85f,.85f),new Color(.85f,.91f,.85f),3);
             Part(group,"왼쪽 조끼",rectangle,new Vector2(-.18f,-.04f),new Vector2(.25f,.43f),new Color(.16f,.48f,.48f),4);
@@ -83,7 +83,7 @@ namespace FishingPrototype
         public static void DressShuriken(GameObject go)
         {
             Init(); go.GetComponent<SpriteRenderer>().sprite=star;go.GetComponent<SpriteRenderer>().color=new Color(.78f,.9f,.96f);
-            go.GetComponent<HookableBody>().BaseColor=new Color(.78f,.9f,.96f);
+            go.GetComponent<HookableBody>().baseColor=new Color(.78f,.9f,.96f);
             Part(go.transform,"중심 고리",head,Vector2.zero,Vector2.one*.3f,new Color(.11f,.19f,.25f),3);
             go.GetComponent<Rigidbody2D>().angularVelocity=720f;
         }

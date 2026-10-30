@@ -1,0 +1,16 @@
+#!/bin/sh
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/develop)
+      echo 'Direct pushes to main/develop are blocked. Use a reviewed PR.' >&2; exit 1 ;;
+    refs/heads/feature/*)
+      printf '%s\n' "$remote_ref" | grep -Eq '^refs/heads/feature/[a-z0-9]+(-[a-z0-9]+)*$' || {
+        echo 'Use feature/lowercase-kebab-case.' >&2; exit 1;
+      }
+      if [ "$local_ref" != "$remote_ref" ]; then
+        echo 'Push the feature branch under its own name.' >&2; exit 1
+      fi ;;
+    refs/tags/*) ;;
+    *) echo 'Development branches must use feature/lowercase-kebab-case.' >&2; exit 1 ;;
+  esac
+done

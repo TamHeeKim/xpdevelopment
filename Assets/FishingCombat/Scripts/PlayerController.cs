@@ -6,9 +6,14 @@ namespace FishingPrototype
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class PlayerController : MonoBehaviour
     {
-        public Transform RodVisual;
-        public float MoveSpeed = 7f;
-        public float JumpSpeed = 10.5f;
+        [UnityEngine.Serialization.FormerlySerializedAs("RodVisual")]
+        [Header("연결")]
+        public Transform rodVisual;
+        [UnityEngine.Serialization.FormerlySerializedAs("MoveSpeed")]
+        [Header("이동")]
+        public float moveSpeed = 7f;
+        [UnityEngine.Serialization.FormerlySerializedAs("JumpSpeed")]
+        public float jumpSpeed = 10.5f;
         public Rigidbody2D Body { get; private set; }
         public bool PreserveHorizontalMomentum { get; set; }
         public bool ControlsLocked { get; set; }
@@ -35,12 +40,12 @@ namespace FishingPrototype
         {
             if (ControlsLocked) return;
             if (!PreserveHorizontalMomentum)
-                Body.linearVelocity = new Vector2(moveInput * MoveSpeed * (GetComponent<PoisonStatus>() && Time.time < GetComponent<PoisonStatus>().Until ? 0.6f : 1f), Body.linearVelocity.y);
+                Body.linearVelocity = new Vector2(moveInput * moveSpeed * (GetComponent<PoisonStatus>() && Time.time < GetComponent<PoisonStatus>().until ? 0.6f : 1f), Body.linearVelocity.y);
             else
                 Body.AddForce(Vector2.right * moveInput * 4f);
             if (Time.time - lastJumpTime < 0.12f && IsGrounded())
             {
-                Body.linearVelocity = new Vector2(Body.linearVelocity.x, JumpSpeed);
+                Body.linearVelocity = new Vector2(Body.linearVelocity.x, jumpSpeed);
                 lastJumpTime = -10f;
             }
         }

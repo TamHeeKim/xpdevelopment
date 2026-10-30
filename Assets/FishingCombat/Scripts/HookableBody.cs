@@ -9,18 +9,30 @@ namespace FishingPrototype
     {
         public enum BodyKind { Enemy, Prop }
 
-        public BodyKind Kind;
-        public float MaxHealth = 100f;
-        public Color BaseColor = Color.white;
-        public bool RespawnOnDeath = true;
+        [UnityEngine.Serialization.FormerlySerializedAs("Kind")]
+
+        [Header("대상 설정")]
+        public BodyKind kind;
+        [UnityEngine.Serialization.FormerlySerializedAs("MaxHealth")]
+        public float maxHealth = 100f;
+        [UnityEngine.Serialization.FormerlySerializedAs("BaseColor")]
+        public Color baseColor = Color.white;
+        [UnityEngine.Serialization.FormerlySerializedAs("RespawnOnDeath")]
+        public bool respawnOnDeath = true;
         public Rigidbody2D Body { get; private set; }
         public bool IsHooked { get; private set; }
-        public float ThrowDamageDuration = 2f;
+        [UnityEngine.Serialization.FormerlySerializedAs("ThrowDamageDuration")]
+        [Header("투척 피해")]
+        public float throwDamageDuration = 2f;
         private float thrownUntil = float.NegativeInfinity;
         public bool IsThrown => !respawning && Time.time < thrownUntil;
         private readonly Dictionary<int, float> impactTimes = new Dictionary<int, float>();
 
-        public float HealthFraction => Mathf.Clamp01(health / Mathf.Max(1f, MaxHealth));
+        [Header("표시 이름")]
+        [SerializeField] private string displayNameKey = "object.unknown";
+        public string DisplayName => CombatText.Get(displayNameKey);
+
+        public float HealthFraction => Mathf.Clamp01(health / Mathf.Max(1f, maxHealth));
         private float health;
         private SpriteRenderer visual;
         private Vector2 spawnPosition;
@@ -35,7 +47,7 @@ namespace FishingPrototype
         {
             Body = GetComponent<Rigidbody2D>();
             visual = GetComponent<SpriteRenderer>();
-            health = MaxHealth;
+            health = maxHealth;
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
             CreateLabel();
@@ -43,7 +55,7 @@ namespace FishingPrototype
 
         private void CreateLabel()
         {
-            GameObject go = new GameObject("Status");
+            GameObject go = new GameObject("Text_Status");
             go.transform.SetParent(transform, false);
             go.transform.localPosition = new Vector3(0f, 0.72f, 0f);
             go.transform.localScale = new Vector3(1f / transform.localScale.x, 1f / transform.localScale.y, 1f);
@@ -63,7 +75,7 @@ namespace FishingPrototype
         public void SetHooked(bool value)
         {
             if (value) { thrownUntil = float.NegativeInfinity; impactTimes.Clear(); }
-            else if (IsHooked && !respawning) thrownUntil = Time.time + ThrowDamageDuration;
+            else if (IsHooked && !respawning) thrownUntil = Time.time + throwDamageDuration;
             if (value) GetComponent<Shuriken>()?.Reflect();
             var hitbox = GetComponent<Collider2D>();
             if (value && !IsHooked && hitbox)
@@ -87,18 +99,18 @@ namespace FishingPrototype
 
         public void Configure(BodyKind kind, Color color, float maxHealth, bool respawn)
         {
-            Kind = kind;
-            BaseColor = color;
-            MaxHealth = maxHealth;
-            health = MaxHealth;
-            RespawnOnDeath = respawn;
-            if (visual) visual.color = BaseColor;
+            this.kind = kind;
+            baseColor = color;
+            this.maxHealth = maxHealth;
+            health = this.maxHealth;
+            respawnOnDeath = respawn;
+            if (visual) visual.color = baseColor;
             RefreshLabel();
         }
 
         public void ReceiveDamage(float damage, Vector2 hitPoint)
         {
-            if (Kind == BodyKind.Prop || respawning || damage <= 0f) return;
+            if (kind == BodyKind.Prop || respawning || damage <= 0f) return;
             health -= damage;
             RefreshLabel();
             if (flashRoutine != null) StopCoroutine(flashRoutine);
@@ -108,7 +120,7 @@ namespace FishingPrototype
 
         private void FixedUpdate()
         {
-            if (Kind != BodyKind.Prop || IsHooked || GetComponent<Shuriken>() || Body.position.y >= -12f) return;
+            if (kind != BodyKind.Prop || IsHooked || GetComponent<Shuriken>() || Body.position.y >= -12f) return;
             Body.position = spawnPosition;
             Body.rotation = spawnRotation.eulerAngles.z;
             Body.linearVelocity = Vector2.zero;
@@ -142,7 +154,7 @@ namespace FishingPrototype
         {
             visual.color = Color.white;
             yield return new WaitForSeconds(0.08f);
-            visual.color = BaseColor;
+            visual.color = baseColor;
             flashRoutine = null;
         }
 
@@ -155,7 +167,7 @@ namespace FishingPrototype
             foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = false;
             GetComponent<Collider2D>().enabled = false;
             Body.simulated = false;
-            if (!RespawnOnDeath)
+            if (!respawnOnDeath)
             {
                 yield return new WaitForSeconds(0.45f);
                 Destroy(gameObject);
@@ -166,20 +178,20 @@ namespace FishingPrototype
             Body.simulated = true;
             Body.linearVelocity = Vector2.zero;
             Body.angularVelocity = 0f;
-            health = MaxHealth;
+            health = maxHealth;
             foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = true;
             GetComponent<Collider2D>().enabled = true;
             respawning = false;
             RefreshLabel();
         }
 
-        public void SetDisplayName(string value) { gameObject.name = value; RefreshLabel(); }
+        public void SetDisplayNameKey(string key) { displayNameKey = key; RefreshLabel(); }
 
         private void RefreshLabel()
         {
             if (!label) return;
-            string type = gameObject.name;
-            label.text = type + "  " + Mathf.CeilToInt(Mathf.Max(0f, health)) + (IsHooked ? "  [포획 중]" : "");
+            string type = DisplayName;
+            label.text = type + "  " + Mathf.CeilToInt(Mathf.Max(0f, health)) + (IsHooked ? CombatText.Get("status.hooked_suffix") : "");
         }
     }
 }

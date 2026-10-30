@@ -10,7 +10,9 @@ namespace FishingPrototype
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class PlayerHealth : MonoBehaviour
     {
-        public float MaxHealth = 100f;
+        [UnityEngine.Serialization.FormerlySerializedAs("MaxHealth")]
+        [Header("플레이어 체력")]
+        public float maxHealth = 100f;
         public float Health { get; private set; }
 
         private Rigidbody2D body;
@@ -23,14 +25,14 @@ namespace FishingPrototype
         {
             body = GetComponent<Rigidbody2D>();
             visual = GetComponent<SpriteRenderer>();
-            Health = MaxHealth;
+            Health = maxHealth;
             checkpoint = transform.position;
             CreateHud();
         }
 
         private void CreateHud()
         {
-            GameObject go = new GameObject("Player Health HUD");
+            GameObject go = new GameObject("Text_Health");
             go.transform.SetParent(Camera.main.transform, false);
             go.transform.localPosition = new Vector3(4.7f, 4.72f, 10f);
             healthText = go.AddComponent<TextMesh>();
@@ -47,7 +49,7 @@ namespace FishingPrototype
         }
 
         public void SetCheckpoint(Vector2 point) => checkpoint = point;
-        public void Heal() { Health = MaxHealth; RefreshHud(); }
+        public void Heal() { Health = maxHealth; RefreshHud(); }
 
         public void ReceiveDamage(float damage, Vector2 knockback)
         {
@@ -73,14 +75,14 @@ namespace FishingPrototype
             recovering = true;
             FindFirstObjectByType<FishingRodController>()?.Interrupt();
             GetComponent<PlayerController>().ControlsLocked = true;
-            var poison = GetComponent<PoisonStatus>(); if (poison) poison.Until = 0;
+            var poison = GetComponent<PoisonStatus>(); if (poison) poison.until = 0;
             body.simulated = false;
             visual.enabled = false;
             yield return new WaitForSeconds(0.8f);
             transform.position = checkpoint;
             body.simulated = true;
             body.linearVelocity = Vector2.zero;
-            Health = MaxHealth;
+            Health = maxHealth;
             visual.enabled = true;
             recovering = false;
             GetComponent<PlayerController>().ControlsLocked = false;
@@ -90,7 +92,7 @@ namespace FishingPrototype
 
         private void RefreshHud()
         {
-            if (healthText) healthText.text = "체력  " + Mathf.CeilToInt(Health) + " / " + Mathf.CeilToInt(MaxHealth);
+            if (healthText) healthText.text = CombatText.Format("health.value", Mathf.CeilToInt(Health), Mathf.CeilToInt(maxHealth));
         }
     }
 
@@ -180,8 +182,11 @@ namespace FishingPrototype
 
     public sealed class StageDirector : MonoBehaviour
     {
-        public PlayerController Player;
-        public FishingRodController Rod;
+        [UnityEngine.Serialization.FormerlySerializedAs("Player")]
+        [Header("연결")]
+        public PlayerController player;
+        [UnityEngine.Serialization.FormerlySerializedAs("Rod")]
+        public FishingRodController rod;
 
         private readonly List<HookableBody> waveOne = new List<HookableBody>();
         private readonly List<HookableBody> waveTwo = new List<HookableBody>();
@@ -200,12 +205,12 @@ namespace FishingPrototype
 
         private void Start()
         {
-            combatGate = CreateGate("Combat Gate", 10.5f, new Color(0.85f, 0.25f, 0.22f));
-            finishGate = CreateGate("Finish Gate", 36.5f, new Color(0.74f, 0.24f, 0.78f));
+            combatGate = CreateGate("Environment_CombatGate", 10.5f, new Color(0.85f, 0.25f, 0.22f));
+            finishGate = CreateGate("Environment_FinishGate", 36.5f, new Color(0.74f, 0.24f, 0.78f));
 
             for (int i = 0; i < 3; i++)
             {
-                var bottle = PrototypeBootstrap.CreateHookable("호리병", new Vector2(i * 12f, -1.5f), new Vector2(0.5f, 0.8f), Color.cyan, HookableBody.BodyKind.Prop, 1f, 500f, false);
+                var bottle = PrototypeBootstrap.CreateHookable("Prop_PoisonBottle", new Vector2(i * 12f, -1.5f), new Vector2(0.5f, 0.8f), Color.cyan, HookableBody.BodyKind.Prop, 1f, 500f, false, "object.bottle");
                 bottle.AddComponent<PoisonBottle>();
             }
             CreateObjectiveHud();
@@ -213,27 +218,27 @@ namespace FishingPrototype
             {
                 waveOneStarted = waveOneCleared = catchReady = true;
                 combatGate.SetActive(false);
-                Player.transform.position = new Vector2(14f, -1.15f);
-                Player.GetComponent<PlayerHealth>().SetCheckpoint(Player.transform.position);
+                player.transform.position = new Vector2(14f, -1.15f);
+                player.GetComponent<PlayerHealth>().SetCheckpoint(player.transform.position);
             }
-            SetObjective("시작 지점·첫 전투 다음 휴식 구간에서 E: 저장·회복  |  F9: 불러오기");
+            SetObjective(CombatText.Get("objective.start"));
         }
 
         private void Update()
         {
             if ((Keyboard.current?.eKey.wasPressedThisFrame ?? false) &&
-                (Player.transform.position.x < -5f || (waveOneCleared && Mathf.Abs(Player.transform.position.x - 14f) < 2f)))
+                (player.transform.position.x < -5f || (waveOneCleared && Mathf.Abs(player.transform.position.x - 14f) < 2f)))
             {
-                bool second = waveOneCleared && Player.transform.position.x > 10f;
+                bool second = waveOneCleared && player.transform.position.x > 10f;
                 catchReady = second;
                 Vector2 point = new Vector2(second ? 14f : -8f, -1.15f);
-                Player.GetComponent<PlayerHealth>().SetCheckpoint(point);
-                Player.GetComponent<PlayerHealth>().Heal();
+                player.GetComponent<PlayerHealth>().SetCheckpoint(point);
+                player.GetComponent<PlayerHealth>().Heal();
                 PlayerPrefs.SetInt("TangCheckpoint", second ? 1 : 0);
                 PlayerPrefs.Save();
-                SetObjective("저장·회복 완료  |  오른쪽으로 이동하세요");
+                SetObjective(CombatText.Get("objective.saved"));
             }
-            if (!waveOneStarted && Player.transform.position.x > -4.5f)
+            if (!waveOneStarted && player.transform.position.x > -4.5f)
             {
                 waveOneStarted = true;
                 StartCoroutine(SpawnEncounter(waveOne, false));
@@ -243,10 +248,10 @@ namespace FishingPrototype
             {
                 waveOneCleared = true;
                 combatGate.SetActive(false);
-                SetObjective("첫 번째 전투 완료  |  오른쪽 휴식 구간에서 E: 저장·회복");
+                SetObjective(CombatText.Get("objective.first_clear"));
             }
 
-            if (waveOneCleared && !waveTwoStarted && Player.transform.position.x > 20.5f)
+            if (waveOneCleared && !waveTwoStarted && player.transform.position.x > 20.5f)
             {
                 waveTwoStarted = true;
                 StartCoroutine(SpawnEncounter(waveTwo, true));
@@ -256,7 +261,7 @@ namespace FishingPrototype
             {
                 stageComplete = true;
                 finishGate.SetActive(false);
-                SetObjective("구간 완료  |  R: 저장 지점부터 다시 시작");
+                SetObjective(CombatText.Get("objective.complete"));
             }
         }
 
@@ -272,7 +277,7 @@ namespace FishingPrototype
             foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) Destroy(star.gameObject);
             waveTwoStarted = stageComplete = false; finishGate.SetActive(true);
             if (!catchReady) { waveOneStarted = waveOneCleared = false; combatGate.SetActive(true); }
-            SetObjective("재도전  |  오른쪽으로 이동하세요");
+            SetObjective(CombatText.Get("objective.retry"));
         }
 
         public static float ChooseSpawnX(float playerX, bool second)
@@ -287,21 +292,21 @@ namespace FishingPrototype
             {
                 // Keep the arena readable: at most three living enemies at a time.
                 while (LivingCount(wave) >= 3) yield return new WaitForSeconds(0.3f);
-                float x = ChooseSpawnX(Player.transform.position.x, second);
-                spawnWarning = PrototypeBootstrap.CreateVisual("적 등장 예고", new Vector2(x, -1.95f), new Vector2(1.5f,0.12f), new Color(1f,0.55f,0.2f));
-                SetObjective((second ? "두 번째 전투" : "첫 번째 전투") + " · 적 접근 중  " + (i+1) + "/" + total);
+                float x = ChooseSpawnX(player.transform.position.x, second);
+                spawnWarning = PrototypeBootstrap.CreateVisual("Sprite_SpawnWarning", new Vector2(x, -1.95f), new Vector2(1.5f,0.12f), new Color(1f,0.55f,0.2f));
+                SetObjective(CombatText.Format("wave.approach_count", second ? CombatText.Get("wave.second") : CombatText.Get("wave.first"), i + 1, total));
                 yield return new WaitForSeconds(1.2f);
                 // Re-warn if the player moved onto the spawn point during the telegraph.
-                while (Mathf.Abs(Player.transform.position.x-x) < 2.5f)
+                while (Mathf.Abs(player.transform.position.x-x) < 2.5f)
                 {
-                    x=ChooseSpawnX(Player.transform.position.x,second);
+                    x=ChooseSpawnX(player.transform.position.x,second);
                     spawnWarning.transform.position=new Vector2(x,-1.95f);
                     yield return new WaitForSeconds(1.2f);
                 }
                 bool heavy = second ? i%3==2 : i==3;
                 wave.Add(SpawnEnemy(heavy?EnemyCombatAI.EnemyType.Bruiser:EnemyCombatAI.EnemyType.Rusher,new Vector2(x,heavy?-.9f:-1.1f)));
                 Destroy(spawnWarning); spawnWarning=null;
-                SetObjective((second?"두 번째 전투":"첫 번째 전투")+" · 남은 적 "+(LivingCount(wave)+total-i-1));
+                SetObjective(CombatText.Format("wave.remaining_count", second ? CombatText.Get("wave.second") : CombatText.Get("wave.first"), LivingCount(wave) + total - i - 1));
                 if(i+1<total) yield return new WaitForSeconds(i%2==1?3f:1f);
             }
             if(second) secondSpawnComplete=true; else firstSpawnComplete=true;
@@ -316,13 +321,13 @@ namespace FishingPrototype
         {
             bool bruiser = type == EnemyCombatAI.EnemyType.Bruiser;
             Color color = bruiser ? new Color(0.62f, 0.22f, 0.75f) : new Color(0.92f, 0.22f, 0.18f);
-            GameObject enemy = PrototypeBootstrap.CreateHookable(bruiser ? "무거운 적" : "일반 적", position,
+            GameObject enemy = PrototypeBootstrap.CreateHookable(bruiser ? "Enemy_Heavy" : "Enemy_Normal", position,
                 bruiser ? new Vector2(1.35f, 2.15f) : new Vector2(0.85f, 1.65f), color,
-                HookableBody.BodyKind.Enemy, bruiser ? 3.4f : 1.15f, bruiser ? 150f : 72f, false);
+                HookableBody.BodyKind.Enemy, bruiser ? 3.4f : 1.15f, bruiser ? 150f : 72f, false, bruiser ? "enemy.heavy" : "enemy.normal");
             enemy.GetComponent<Rigidbody2D>().freezeRotation = true;
             CombatShapes.DressEnemy(enemy, bruiser);
             TangEnemyAI ai = enemy.AddComponent<TangEnemyAI>();
-            ai.Player = Player;
+            ai.player = player;
             foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) star.ConfigureEnemy(enemy.GetComponent<Collider2D>());
             return enemy.GetComponent<HookableBody>();
         }
@@ -337,7 +342,7 @@ namespace FishingPrototype
 
         private void CreateObjectiveHud()
         {
-            GameObject go = new GameObject("Objective HUD");
+            GameObject go = new GameObject("Text_Objective");
             go.transform.SetParent(Camera.main.transform, false);
             go.transform.localPosition = new Vector3(0f, 3.85f, 10f);
             objective = go.AddComponent<TextMesh>();

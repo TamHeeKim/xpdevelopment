@@ -13,7 +13,7 @@ namespace FishingPrototype
         {
             player = GetComponent<PlayerController>();
             model = CombatShapes.DressPlayer(gameObject);
-            leftBoot = model.Find("왼쪽 장화"); rightBoot = model.Find("오른쪽 장화");
+            leftBoot = model.Find("Sprite_왼쪽장화"); rightBoot = model.Find("Sprite_오른쪽장화");
             parts = model.GetComponentsInChildren<SpriteRenderer>(); colors = new Color[parts.Length];
             for(int i=0;i<parts.Length;i++) colors[i]=parts[i].color;
         }
