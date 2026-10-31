@@ -13,7 +13,12 @@ namespace FishingPrototype
         {
             body = GetComponent<HookableBody>(); hitbox = GetComponent<Collider2D>();
             foreach (var target in FindObjectsByType<HookableBody>(FindObjectsSortMode.None))
+            {
+                if (target == body) continue;
                 if (target.kind == HookableBody.BodyKind.Enemy) ConfigureEnemy(target.GetComponent<Collider2D>());
+                else foreach (var collider in target.GetComponentsInChildren<Collider2D>())
+                    Physics2D.IgnoreCollision(hitbox, collider, true);
+            }
             foreach (var other in FindObjectsByType<Shuriken>(FindObjectsSortMode.None))
                 if (other != this) Physics2D.IgnoreCollision(hitbox, other.GetComponent<Collider2D>(), true);
         }

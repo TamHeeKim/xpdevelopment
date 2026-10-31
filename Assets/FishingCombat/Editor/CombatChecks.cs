@@ -39,6 +39,31 @@ namespace FishingPrototype.Editor
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
+        private static void CheckHeldTip()
+        {
+            var player = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("Player"));
+            var prop = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("Rock"));
+            try
+            {
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                var rod = player.GetComponentInChildren<FishingRodController>();
+                typeof(FishingRodController).GetMethod("Start", flags).Invoke(rod, null);
+                var target = prop.GetComponent<HookableBody>();
+                typeof(HookableBody).GetMethod("Awake", flags).Invoke(target, null);
+                typeof(FishingRodController).GetMethod("Hook", flags).Invoke(rod, new object[] { target });
+                prop.transform.position = new Vector3(3f, 2f, 0f);
+                var lateUpdate = typeof(FishingRodController).GetMethod("LateUpdate", flags);
+                lateUpdate.Invoke(rod, null);
+                var tip = (SpriteRenderer)typeof(FishingRodController).GetField("tipVisual", flags).GetValue(rod);
+                var line = (LineRenderer)typeof(FishingRodController).GetField("line", flags).GetValue(rod);
+                if (tip.enabled || Vector3.Distance(line.GetPosition(line.positionCount - 1), prop.transform.position) > 0.001f)
+                    throw new Exception("포획 중 찌는 숨기고 줄 끝은 물체 표시 위치에 연결해야 한다.");
+                rod.Interrupt(); lateUpdate.Invoke(rod, null);
+                if (!tip.enabled) throw new Exception("포획 해제 후 찌 표시를 복원해야 한다.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(prop); UnityEngine.Object.DestroyImmediate(player); }
+        }
+
         public static void Run()
         {
             var go = new GameObject("Test_Combatcheck");
@@ -85,14 +110,21 @@ namespace FishingPrototype.Editor
             var projectile = new GameObject("Test_Projectilecollisioncheck");
             projectile.AddComponent<HookableBody>();
             var projectileCollider = projectile.AddComponent<BoxCollider2D>();
+            var propObject = new GameObject("Test_ShurikenProp");
+            var prop = propObject.AddComponent<HookableBody>(); prop.kind = HookableBody.BodyKind.Prop;
+            var propCollider = propObject.AddComponent<BoxCollider2D>();
             var star = projectile.AddComponent<Shuriken>();
             typeof(Shuriken).GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(star, null);
             star.ConfigureEnemy(go.GetComponent<Collider2D>());
             if (!Physics2D.GetIgnoreCollision(projectileCollider, go.GetComponent<Collider2D>())) throw new Exception("Enemy shuriken must pass through allies");
+            if (!Physics2D.GetIgnoreCollision(projectileCollider, propCollider)) throw new Exception("수리검은 일반 오브젝트를 통과해야 한다.");
             star.Reflect();
+            if (!Physics2D.GetIgnoreCollision(projectileCollider, propCollider)) throw new Exception("되던진 수리검도 일반 오브젝트를 통과해야 한다.");
+            UnityEngine.Object.DestroyImmediate(propObject);
             if (Physics2D.GetIgnoreCollision(projectileCollider, go.GetComponent<Collider2D>())) throw new Exception("Returned shuriken must hit enemies");
             UnityEngine.Object.DestroyImmediate(projectile);
             CheckSpawnPoints();
+            CheckHeldTip();
             UnityEngine.Object.DestroyImmediate(go);
             Vector2 velocity = new Vector2(10f, 0f);
             Vector2 redirected = CombatAimAssist.RedirectThrow(velocity, new Vector2(4f, 2f), 55f);

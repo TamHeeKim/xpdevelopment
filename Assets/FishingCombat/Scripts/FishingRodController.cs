@@ -55,6 +55,7 @@ namespace FishingPrototype
         [SerializeField] private CircleCollider2D tipCollider;
         [SerializeField] private LineRenderer line;
         [SerializeField] private LineRenderer strikeLine;
+        private SpriteRenderer tipVisual;
         private HookableBody hooked;
         private Vector2 aim = Vector2.right;
         [Header("포획 효과음")]
@@ -87,6 +88,7 @@ namespace FishingPrototype
             rodAngles = rodVisual.localEulerAngles;
             if (!tipBody || !tipCollider || !line || !strikeLine || !outline)
                 throw new System.InvalidOperationException("낚싯줄 프리팹 연결이 누락되었습니다.");
+            tipVisual = tipBody.GetComponent<SpriteRenderer>();
             Physics2D.IgnoreCollision(tipCollider, player.GetComponent<Collider2D>());
             tipBody.position = RodAnchor + aim * idleLength;
         }
@@ -145,6 +147,11 @@ namespace FishingPrototype
                     }
                 }
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (tipVisual) tipVisual.enabled = !hooked && !charging;
             DrawLine();
         }
 
@@ -464,8 +471,8 @@ namespace FishingPrototype
         {
             if (!line || !tipBody) return;
             Vector2 start = RodAnchor;
-            Vector2 end = state == RodState.Hooked && hooked ? hooked.Body.position :
-                tipBody.position;
+            Vector2 end = state == RodState.Hooked && hooked ? (Vector2)hooked.transform.position :
+                charging ? (Vector2)charging.transform.position : (Vector2)tipBody.transform.position;
             float distance = Vector2.Distance(start, end);
             float slack = state == RodState.Hooked ? Mathf.Max(0f, ropeLength - distance) : 0.1f;
             float sag = 0.08f + slack * 0.35f;
