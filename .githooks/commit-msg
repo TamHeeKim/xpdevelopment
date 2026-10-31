@@ -1,0 +1,6 @@
+#!/bin/sh
+first_line=$(head -n 1 "$1" | tr -d '\r')
+printf '%s\n' "$first_line" | grep -Eq '^\[(TEST|MERGE|BUILD|INIT|DOC|REFAC|FIX|MOD|ADD|FEAT)\] .+' || {
+  echo 'Commit must start with an approved [HEADER] followed by a description.' >&2
+  exit 1
+}

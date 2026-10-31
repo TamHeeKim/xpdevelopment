@@ -1,0 +1,43 @@
+﻿key,ko,en
+player.name,낚시꾼,
+object.unknown,오브젝트,
+object.rock,던지는 돌,
+object.bottle,호리병,
+object.poison_bottle,독가스 호리병,
+object.shuriken,수리검,
+enemy.heavy,무거운 적,
+enemy.normal,일반 적,
+equipment.bobber,기본 낚시찌,
+hud.tip,한 번의 포획으로 전세를 뒤집으세요,
+hud.objective,현재 목표,
+hud.ready,전투 준비,
+hud.hooked_suffix, · 포획,
+hud.capture_heavy,무거운 적 포획 중 · 좌클릭 유지,
+hud.held_controls,우클릭: 당기기  /  좌클릭 떼기: 투척,
+hud.attack_controls,좌클릭: 공격  /  유지: 포획,
+ui.close,닫기,
+ui.open,열기,
+hud.help_title,낚싯대 전투 · 조작 안내,
+hud.help_body,"A / D   이동       W   점프
+좌클릭   공격 · 유지하면 포획
+잡은 뒤 아래로 빠르게 휘두르기   내려찍기
+좌클릭 떼기   투척       우클릭 유지   당기기
+E   저장·회복
+F9   저장 불러오기       R   재시작
+수리검은 되던지고, 호리병은 독가스에 담그세요",
+status.hooked_suffix,  [포획 중],
+objective.start,시작 지점·첫 전투 다음 휴식 구간에서 E: 저장·회복  |  F9: 불러오기,
+objective.saved,저장·회복 완료  |  오른쪽으로 이동하세요,
+objective.first_clear,첫 번째 전투 완료  |  오른쪽 휴식 구간에서 E: 저장·회복,
+objective.complete,구간 완료  |  R: 저장 지점부터 다시 시작,
+objective.retry,재도전  |  오른쪽으로 이동하세요,
+wave.first,첫 번째 전투,
+wave.second,두 번째 전투,
+hud.poison,중독 · 이동속도 감소   {0:0.0}초,
+hud.held,포획 중  ·  {0},
+hud.equipped,장착  ·  {0},
+hud.help_toggle,H  조작 안내 {0},
+health.value,체력  {0} / {1},
+wave.approach_count,{0} · 적 접근 중  {1}/{2},
+wave.remaining_count,{0} · 남은 적 {1},
+hud.health_value,{0} / {1},{0} / {1}
