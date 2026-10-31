@@ -49,7 +49,7 @@ namespace FishingPrototype
                 {
                     var target = col.GetComponent<HookableBody>();
                     if (target && target.kind == HookableBody.BodyKind.Enemy && target.Body.simulated && damaged.Add(target))
-                        target.ReceiveDamage(damage, transform.position);
+                        target.ReceiveDamage(damage);
                 }
                 return;
             }

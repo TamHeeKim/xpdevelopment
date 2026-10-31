@@ -1722,7 +1722,6 @@ GameObject:
   - component: {fileID: 6016958253034503940}
   - component: {fileID: 8758665779083593113}
   - component: {fileID: 3697405938872196014}
-  - component: {fileID: 664770589620840679}
   m_Layer: 0
   m_Name: Environment_Ground
   m_TagString: Untagged
@@ -1850,18 +1849,6 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &664770589620840679
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6104974643662913473}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b895e8197884eaba9390c2ddd360307, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.GroundSurface
 --- !u!1 &6336143284582950452
 GameObject:
   m_ObjectHideFlags: 0

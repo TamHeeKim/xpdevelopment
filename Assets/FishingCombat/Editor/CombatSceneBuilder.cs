@@ -138,7 +138,7 @@ namespace FishingPrototype.Editor
             for(int i=-3;i<=12;i++)Visual("Sprite_DistanceMarker_"+i,new Vector2(i*4f,-1.85f),new Vector2(0.04f,0.35f),new Color(0.2f,0.28f,0.34f),level.transform).GetComponent<SpriteRenderer>().sortingOrder=-2;
             Visual("Sprite_Sea",new Vector2(17,-4.15f),new Vector2(78,2.15f),new Color(0.06f,0.3f,0.5f),level.transform).GetComponent<SpriteRenderer>().sortingOrder=-4;
             Visual("Sprite_SeaSurface",new Vector2(17,-3.18f),new Vector2(78,0.12f),new Color(0.2f,0.72f,0.9f),level.transform).GetComponent<SpriteRenderer>().sortingOrder=-3;
-            var ground=Visual("Environment_Ground",new Vector2(17,-2.65f),new Vector2(78,1.25f),new Color(0.13f,0.18f,0.22f),level.transform);ground.AddComponent<BoxCollider2D>();ground.AddComponent<GroundSurface>();
+            var ground=Visual("Environment_Ground",new Vector2(17,-2.65f),new Vector2(78,1.25f),new Color(0.13f,0.18f,0.22f),level.transform);ground.AddComponent<BoxCollider2D>();
             Visual("Sprite_GroundEdge",new Vector2(17,-2f),new Vector2(78,0.08f),new Color(0.33f,0.78f,0.68f),level.transform).GetComponent<SpriteRenderer>().sortingOrder=1;
             Visual("Environment_CombatGate",new Vector2(10.5f,1.3f),new Vector2(0.3f,6.6f),new Color(0.85f,0.25f,0.22f,0.72f),level.transform).AddComponent<BoxCollider2D>();
             Visual("Environment_FinishGate",new Vector2(36.5f,1.3f),new Vector2(0.3f,6.6f),new Color(0.74f,0.24f,0.78f,0.72f),level.transform).AddComponent<BoxCollider2D>();

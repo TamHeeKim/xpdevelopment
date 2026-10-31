@@ -106,11 +106,6 @@ namespace FishingPrototype
             SetObjective(CombatText.Get("objective.retry"));
         }
 
-        public static float ChooseSpawnX(float playerX, bool second)
-        {
-            float left = second ? 23f : 1.5f, right = second ? 34f : 8.5f;
-            return Mathf.Abs(playerX-left) >= Mathf.Abs(playerX-right) ? left : right;
-        }
         private IEnumerator SpawnEncounter(List<HookableBody> wave, bool second)
         {
             int total = second ? secondWaveCount : firstWaveCount;
@@ -131,7 +126,7 @@ namespace FishingPrototype
                     yield return new WaitForSeconds(warningTime);
                 }
                 bool heavy = second ? i%3==2 : i==3;
-                wave.Add(SpawnEnemy(heavy?EnemyCombatAI.EnemyType.Bruiser:EnemyCombatAI.EnemyType.Rusher,spawnPoint + Vector2.up * (heavy ? heavySpawnOffset : 0f)));
+                wave.Add(SpawnEnemy(heavy,spawnPoint + Vector2.up * (heavy ? heavySpawnOffset : 0f)));
                 Destroy(spawnWarning); spawnWarning=null;
                 SetObjective(CombatText.Format("wave.remaining_count", second ? CombatText.Get("wave.second") : CombatText.Get("wave.first"), LivingCount(wave) + total - i - 1));
                 if(i+1<total) yield return new WaitForSeconds(i%2==1?groupInterval:spawnInterval);
@@ -144,10 +139,9 @@ namespace FishingPrototype
             return count;
         }
 
-        private HookableBody SpawnEnemy(EnemyCombatAI.EnemyType type, Vector2 position)
+        private HookableBody SpawnEnemy(bool heavy, Vector2 position)
         {
-            bool bruiser = type == EnemyCombatAI.EnemyType.Bruiser;
-            var enemy = Instantiate(bruiser ? heavyEnemyPrefab : normalEnemyPrefab, position, Quaternion.identity);
+            var enemy = Instantiate(heavy ? heavyEnemyPrefab : normalEnemyPrefab, position, Quaternion.identity);
             enemy.GetComponent<TangEnemyAI>().player = player;
             foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) star.ConfigureEnemy(enemy.GetComponent<Collider2D>());
             return enemy;

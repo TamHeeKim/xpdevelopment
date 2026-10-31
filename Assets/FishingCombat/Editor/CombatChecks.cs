@@ -5,6 +5,40 @@ namespace FishingPrototype.Editor
 {
     public static class CombatChecks
     {
+        private static void CheckSpawnPoints()
+        {
+            var root = new GameObject("Test_SpawnPoints");
+            try
+            {
+                var stage = root.AddComponent<StageDirector>();
+                var playerObject = new GameObject("Test_Player");
+                playerObject.transform.SetParent(root.transform);
+                stage.player = playerObject.AddComponent<PlayerController>();
+                var points = new Transform[4];
+                for (int i = 0; i < points.Length; i++)
+                {
+                    points[i] = new GameObject("Point_" + i).transform;
+                    points[i].SetParent(root.transform);
+                    points[i].position = new Vector2(i * 13f - 7f, i + 2f);
+                }
+                stage.firstLeftSpawn = points[0]; stage.firstRightSpawn = points[1];
+                stage.secondLeftSpawn = points[2]; stage.secondRightSpawn = points[3];
+                var choose = typeof(StageDirector).GetMethod("ChooseSpawnPoint", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                for (int wave = 0; wave < 2; wave++)
+                {
+                    Vector2 left = points[wave * 2].position, right = points[wave * 2 + 1].position;
+                    foreach (float x in new[] { left.x, right.x, (left.x + right.x) / 2f })
+                    {
+                        stage.player.transform.position = new Vector2(x, 0f);
+                        Vector2 expected = Mathf.Abs(x - left.x) >= Mathf.Abs(x - right.x) ? left : right;
+                        var actual = (Vector2)choose.Invoke(stage, new object[] { wave == 1 });
+                        if (actual != expected) throw new Exception("출현 위치는 편집된 마커 중 먼 쪽을 선택하고 높이를 유지해야 한다.");
+                    }
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
         public static void Run()
         {
             var go = new GameObject("Test_Combatcheck");
@@ -35,7 +69,7 @@ namespace FishingPrototype.Editor
             bottle.Fill();
             if (!bottle.Filled || target.baseColor != Color.green) throw new Exception("Bottle capture failed");
             target.Configure(HookableBody.BodyKind.Prop, Color.green, 100f, false);
-            target.ReceiveDamage(10000f, Vector2.zero);
+            target.ReceiveDamage(10000f);
             if (target.HealthFraction != 1f) throw new Exception("일반 오브젝트는 피해로 파괴되지 않아야 한다");
             target.throwDamageDuration = 2f;
             target.SetHooked(true); target.SetHooked(false);
@@ -58,9 +92,7 @@ namespace FishingPrototype.Editor
             star.Reflect();
             if (Physics2D.GetIgnoreCollision(projectileCollider, go.GetComponent<Collider2D>())) throw new Exception("Returned shuriken must hit enemies");
             UnityEngine.Object.DestroyImmediate(projectile);
-            for(int i=-10;i<40;i++)
-                if (Mathf.Abs(StageDirector.ChooseSpawnX(i,false)-i)<3.5f || Mathf.Abs(StageDirector.ChooseSpawnX(i,true)-i)<5.5f)
-                    throw new Exception("Spawn must choose the farther entrance");
+            CheckSpawnPoints();
             UnityEngine.Object.DestroyImmediate(go);
             Vector2 velocity = new Vector2(10f, 0f);
             Vector2 redirected = CombatAimAssist.RedirectThrow(velocity, new Vector2(4f, 2f), 55f);

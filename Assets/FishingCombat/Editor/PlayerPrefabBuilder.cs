@@ -85,7 +85,6 @@ namespace FishingPrototype.Editor
             rod.transform.SetParent(player.transform, false);
             rod.transform.localPosition = new Vector3(0.52f, 0.28f, 0f);
             rod.transform.localRotation = Quaternion.Euler(0f, 0f, 35f);
-            controller.rodVisual = rod.transform;
             var system = new GameObject("System_FishingRod");
             system.transform.SetParent(player.transform, false);
             var combat = system.AddComponent<FishingRodController>();
@@ -135,7 +134,7 @@ namespace FishingPrototype.Editor
             var appearance = prefab.GetComponent<PlayerAppearance>();
             var rod = prefab.GetComponentInChildren<FishingRodController>(true);
             if (!player || !prefab.GetComponent<PlayerHealth>() || !appearance || !appearance.model ||
-                !appearance.leftBoot || !appearance.rightBoot || !rod || rod.player != player || rod.rodVisual != player.rodVisual)
+                !appearance.leftBoot || !appearance.rightBoot || !rod || rod.player != player || !rod.rodVisual)
                 throw new Exception("플레이어 프리팹 연결이 누락되었습니다.");
             foreach (var behaviour in prefab.GetComponentsInChildren<MonoBehaviour>(true))
                 if (!behaviour || !MonoScript.FromMonoBehaviour(behaviour)) throw new Exception("저장되지 않은 플레이어 컴포넌트가 있습니다.");

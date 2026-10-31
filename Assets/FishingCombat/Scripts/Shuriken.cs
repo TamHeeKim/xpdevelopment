@@ -27,7 +27,7 @@ namespace FishingPrototype
             var player = FindFirstObjectByType<PlayerController>();
             if (player) Physics2D.IgnoreCollision(hitbox, player.GetComponent<Collider2D>(), true);
         }
-        void Start() { body = GetComponent<HookableBody>(); expires = Time.time + 8f; body.Body.angularVelocity = spinSpeed; }
+        void Start() { expires = Time.time + 8f; body.Body.angularVelocity = spinSpeed; }
         void Update()
         {
             if (body.IsHooked) { Reflect(); expires = Time.time + 8f; }
@@ -39,7 +39,7 @@ namespace FishingPrototype
             var player = hit.collider.GetComponent<PlayerHealth>();
             var enemy = hit.collider.GetComponent<HookableBody>();
             if (!returned && player) { player.ReceiveDamage(12f, new Vector2(Mathf.Sign(body.Body.linearVelocity.x) * 3f, 1f)); Destroy(gameObject); }
-            else if (returned && enemy && enemy.kind == HookableBody.BodyKind.Enemy) { enemy.ReceiveDamage(30f, transform.position); Destroy(gameObject); }
+            else if (returned && enemy && enemy.kind == HookableBody.BodyKind.Enemy) { enemy.ReceiveDamage(30f); Destroy(gameObject); }
             else if (!enemy && !player) Destroy(gameObject);
         }
     }

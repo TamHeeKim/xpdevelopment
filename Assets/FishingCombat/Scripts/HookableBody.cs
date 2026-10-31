@@ -86,7 +86,7 @@ namespace FishingPrototype
             if (visual) visual.color = baseColor;
         }
 
-        public void ReceiveDamage(float damage, Vector2 hitPoint)
+        public void ReceiveDamage(float damage)
         {
             if (kind == BodyKind.Prop || respawning || damage <= 0f) return;
             health -= damage;
@@ -119,12 +119,11 @@ namespace FishingPrototype
             if (partner) partner.impactTimes[GetInstanceID()] = Time.time;
 
             float damage = (speed - 4.5f) * Body.mass * 2.4f;
-            ReceiveDamage(damage, collision.GetContact(0).point);
+            ReceiveDamage(damage);
             CameraShake.Pulse(Mathf.Clamp01(damage / 45f));
 
-            HookableBody other = collision.collider.GetComponent<HookableBody>();
-            if (other && other != this)
-                other.ReceiveDamage(damage * 0.75f, collision.GetContact(0).point);
+            if (partner && partner != this)
+                partner.ReceiveDamage(damage * 0.75f);
         }
 
         private IEnumerator Flash()

@@ -37,8 +37,6 @@ namespace FishingPrototype
         private HookableBody slamTarget;
         private float slamUntil, nextSlam;
 
-        public bool ControlsLocked { get; set; }
-
         private HookableBody charging;
         private float charge;
         [SerializeField] private LineRenderer outline;
@@ -113,15 +111,6 @@ namespace FishingPrototype
                 else { charge += Time.deltaTime; if (charge >= 0.8f) { var target = charging; charging = null; Hook(target); } }
             }
 
-            if (ControlsLocked)
-            {
-                bufferedAttackUntil = float.NegativeInfinity;
-                captureCandidate = null;
-                heldSince = float.PositiveInfinity;
-                DrawLine();
-                return;
-            }
-
             if ((Mouse.current?.leftButton.wasPressedThisFrame ?? false))
             {
                 heldSince = Time.time;
@@ -161,7 +150,6 @@ namespace FishingPrototype
 
         private void FixedUpdate()
         {
-            if (ControlsLocked) return;
             if (state == RodState.Idle && Time.time <= bufferedAttackUntil) StartWhip();
             if (captureCandidate && (state == RodState.Whipping || state == RodState.Returning) && !charging)
             {
@@ -240,8 +228,7 @@ namespace FishingPrototype
             float travel = Mathf.Pow(whipProgress, 1.72f);
             float angle = Mathf.Lerp(-95f * whipSide, 8f * whipSide, Mathf.SmoothStep(0f, 1f, travel));
             float extension = Mathf.Sin(whipProgress * Mathf.PI * 0.5f);
-            float reachScale = 1f;
-            float reach = Mathf.Lerp(0.85f, maxWhipLength * reachScale, extension);
+            float reach = Mathf.Lerp(0.85f, maxWhipLength, extension);
             Vector2 previous = tipBody.position;
             Vector2 next = RodAnchor + Rotate(whipAim, angle) * reach;
             tipVelocity = (next - previous) / Mathf.Max(Time.fixedDeltaTime, 0.001f);
@@ -377,10 +364,9 @@ namespace FishingPrototype
             {
                 float speed = tipVelocity.magnitude;
                 float tipStrength = Mathf.Lerp(0.45f, 1f, Mathf.InverseLerp(attackStart, 1f, ropeT));
-                float catchDamage = 1f;
                 float maxDamage = 34f;
-                float damage = Mathf.Clamp((speed - 4f) * 1.15f * tipStrength * catchDamage, 4f, maxDamage);
-                target.ReceiveDamage(damage, tipBody.position);
+                float damage = Mathf.Clamp((speed - 4f) * 1.15f * tipStrength, 4f, maxDamage);
+                target.ReceiveDamage(damage);
                 CameraShake.Pulse(Mathf.Clamp01(damage / 55f));
                 Vector2 hitDirection = tipVelocity.sqrMagnitude > 0.1f ? tipVelocity.normalized : whipAim;
                 float catchKnockback = 0.22f;

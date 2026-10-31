@@ -2066,7 +2066,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3dacd3b962872d4498d7bdee081fd04, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.PlayerController
-  rodVisual: {fileID: 6484760428449988435}
   moveSpeed: 7
   jumpSpeed: 10.5
 --- !u!114 &1352932390557040755
