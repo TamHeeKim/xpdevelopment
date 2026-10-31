@@ -48,6 +48,7 @@ namespace FishingPrototype
             Part(enemy.transform,"독주머니",head,new Vector2(-.3f,-.08f),new Vector2(.2f,.2f),new Color(.53f,.77f,.24f),4);
             if(heavy) { Part(enemy.transform,"왼쪽 어깨갑옷",head,new Vector2(-.32f,.15f),new Vector2(.4f,.2f),new Color(.51f,.48f,.62f),3);Part(enemy.transform,"오른쪽 어깨갑옷",head,new Vector2(.32f,.15f),new Vector2(.4f,.2f),new Color(.51f,.48f,.62f),3); }
         }
+#if UNITY_EDITOR
         public static Transform DressPlayer(GameObject player)
         {
             Init();
@@ -80,6 +81,7 @@ namespace FishingPrototype
             Part(rod.transform,"끝 장식",rectangle,new Vector2(.46f,0),new Vector2(.07f,1.3f),new Color(.9f,.96f,.96f),8);
         }
 
+#endif
         public static void DressShuriken(GameObject go)
         {
             Init(); go.GetComponent<SpriteRenderer>().sprite=star;go.GetComponent<SpriteRenderer>().color=new Color(.78f,.9f,.96f);

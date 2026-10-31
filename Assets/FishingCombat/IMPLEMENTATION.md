@@ -3,7 +3,7 @@
 ## 실행과 범위
 
 Unity 6000.3.11f1, 새 Input System 사용. `낚싯대 전투 > 전투 씬 열기`로 FishingPrototype 씬을 실행한다.
-전투 오브젝트는 PrototypeBootstrap에서 생성한다. 기본 OriginalFishingPoC와 Linebreaker는 수정 대상이 아니다.
+플레이어·낚싯대는 씬에 배치된 프리팹을 사용한다. 맵·적·HUD 등 나머지는 아직 PrototypeBootstrap/StageDirector에서 생성한다. 기본 OriginalFishingPoC와 Linebreaker는 수정 대상이 아니다.
 현재 버전은 1~6번 범위의 프로토타입이며, 저장은 체크포인트 번호만 보존한다. 전체 월드 스냅샷은 아직 없다.
 
 ## 현재 규칙
@@ -25,7 +25,7 @@ Unity 6000.3.11f1, 새 Input System 사용. `낚싯대 전투 > 전투 씬 열�
 
 | 파일/클래스 | 주요 메서드와 책임 |
 | --- | --- |
-| PrototypeBootstrap | CreatePrototype/Build: 대상 씬에서만 생성. CreatePlayer/CreateFishingRod/CreateHookable/CreateVisual: 런타임 구성. Reload: 씬 다시 읽기 |
+| PrototypeBootstrap | CreatePrototype/Build: 대상 씬에서만 생성. 씬의 플레이어·낚싯대 참조 사용. CreateHookable/CreateVisual: 남은 런타임 구성. Reload: 씬 다시 읽기 |
 | PlayerController | Update: 입력. FixedUpdate: 이동·점프·독 둔화. IsGrounded: 발밑 판정 |
 | FishingRodController | Update/FixedUpdate: 입력·상태 전환. StartWhip/UpdateWhip/UpdateReturn: 공격·회수. SweepWhipCurve/HitTarget: 타격. Hook/ReleaseHook/Interrupt: 포획·해제. FindAssistTarget: 적 보정 대상 선택. DrawLine: 줄 표시 |
 | HookableBody | Configure: 대상 설정. ReceiveDamage: 적 체력. SetHooked: 포획과 충돌 설정. OnCollisionEnter2D: 충돌 피해. Respawn: 사망 처리. SetDisplayNameKey: 표시 키 변경 |
@@ -33,12 +33,12 @@ Unity 6000.3.11f1, 새 Input System 사용. `낚싯대 전투 > 전투 씬 열�
 | TangCombat / PoisonCloud | Spawn: 적/반격 독 생성. FixedUpdate: 효과·주기 피해·수명. CreateSmoke/AnimateSmoke: 보라색 연기 |
 | TangCombat / PoisonBottle | Fill: 독 충전. OnCollisionEnter2D: 반격 연기 생성 후 병 소멸 |
 | TangCombat / Shuriken | Reflect/ConfigureEnemy: 반사와 충돌 필터. Update: 수명. OnCollisionEnter2D: 명중 |
-| StageGameplay / PlayerHealth | ReceiveDamage: 체력 감소. Recover: 사망·체크포인트 복귀. Heal/SetCheckpoint: 저장 지점 처리 |
+| PlayerHealth | ReceiveDamage: 체력 감소. Recover: 사망·체크포인트 복귀. Heal/SetCheckpoint: 저장 지점 처리 |
 | StageGameplay / StageDirector | SpawnEncounter: 예고·순차 등장. ResetEncounter: 재도전. SpawnEnemy: 사천당가 적 생성 |
 | StageGameplay / EnemyCombatAI | 기존 근접 적 구현. 현재 StageDirector는 TangEnemyAI를 사용함 |
 | CombatAimAssist | CanRedirect/RedirectThrow: 투척 각도 제한·속도 보존 |
 | CombatHud | OnGUI: CSV 기반 HUD. Update: 도움말·표시 대상 갱신 |
-| CombatShapes / PlayerAppearance | 외형 생성 및 걷기·피격 표시. 내부 자식 이름과 Find 참조를 같이 변경할 것 |
+| CombatShapes / PlayerAppearance | 적 외형 생성 및 플레이어 걷기·피격 표시. 플레이어 외형은 프리팹의 직접 연결을 사용 |
 | CameraSupport | SmoothCameraFollow.LateUpdate: 추적. CameraShake.Pulse/LateUpdate: 흔들림 |
 | CombatText | Get/Format: 번역 키 조회·문장 조합. Parse: CSV 파싱·검증 |
 | Editor/CombatChecks | Run: 전투와 CSV 회귀 검사 |
@@ -64,3 +64,23 @@ CSV 셀의 쉼표·따옴표·실제 줄바꿈을 지원한다. 스프레드시�
 `낚싯대 전투 > 검사 실행` 또는 배치의 `-executeMethod FishingPrototype.Editor.CombatChecks.Run`.
 검사는 투척 상태, 보정, 광클 방지, 충돌 필터, 독가스, 반격 연기, CSV 및 표시 이름 분리를 포함한다.
 실제 타격감·UI 겹침·포획 조작은 플레이 검증이 추가로 필요하다.
+
+## 플레이어 프리팹 전환 — 2026-10-31
+
+- `Prefabs/Prefab_Player.prefab`: 플레이어 물리·이동·체력·외형·낚싯대 시스템을 보관한다.
+- `Prefabs/Prefab_Rod.prefab`: 플레이어 안에 중첩된 낚싯대 외형이다.
+- `Art/Player`: 기존 외형을 PNG 스프라이트로 저장한 에셋. 플레이 중 임시 외형으로 교체하지 않는다.
+- `Scenes/FishingPrototype.unity`: Player_Fisher 프리팹 인스턴스가 배치돼 있다. 새 씬에서 사용할 때도 플레이어를 명시적으로 배치해야 한다.
+
+프리팹을 더블클릭해 Model_Fisher의 자식 스프라이트·색·위치·크기를 수정한다.
+PlayerAppearance의 model/leftBoot/rightBoot 연결은 유지한다. 파츠 이름 변경만으로 연결이 끊기지 않는다.
+낚싯대의 플레이어 기준 위치·각도는 Player 프리팹 안의 중첩 Rod Transform에서 수정한다.
+플레이어 이동속도·점프·체력과 낚싯대 전투 수치는 해당 컴포넌트의 인스펙터에서 수정한다.
+런타임 애니메이션은 에디터의 초기 위치·크기·각도를 기준으로 움직인다.
+씬 배치 위치는 유지하되, 이미 저장한 체크포인트가 있으면 기존 저장 규칙에 따라 체크포인트에서 시작한다.
+
+`낚싯대 전투 > 플레이어 프리팹 생성 및 씬 배치`는 최초 이관/누락 에셋 생성용이다.
+이미 있는 프리팹과 아트는 덮어쓰지 않는다. 기존 씬 플레이어가 있으면 중복 배치하지 않는다.
+`낚싯대 전투 > 플레이어 프리팹 검사`는 참조·영구 스프라이트·에디터 자세 유지·좌우 반전을 검사한다.
+PlayerHealth는 Unity가 프리팹 컴포넌트로 직렬화할 수 있도록 독립 파일로 분리했다.
+낚싯줄·찌·조준선은 아직 플레이 중 생성된다. 적/오브젝트·맵·Canvas HUD 전환은 후속 작업이다.

@@ -27,15 +27,22 @@ namespace FishingPrototype
             CreateCamera();
             CreateBackdrop();
             CreateGround();
-            GameObject player = CreatePlayer(new Vector2(-8f, -1.15f));
-            FishingRodController rod = CreateFishingRod(player);
+            PlayerController player = FindFirstObjectByType<PlayerController>();
+            if (!player || !player.GetComponentInChildren<FishingRodController>())
+            {
+                Debug.LogError("전투 씬에 Prefab_Player 프리팹을 배치하고 낚싯대 연결을 확인하세요.");
+                enabled = false;
+                return;
+            }
+            FishingRodController rod = player.GetComponentInChildren<FishingRodController>();
+            Camera.main.GetComponent<SmoothCameraFollow>().target = player.transform;
 
             CreateHookable("Prop_ThrowingRock", new Vector2(-1f, -1.55f), new Vector2(0.8f, 0.8f),
                 new Color(0.42f, 0.47f, 0.52f), HookableBody.BodyKind.Prop, 3.2f, 160f, true, "object.rock");
 
             GameObject directorObject = new GameObject("System_StageDirector");
             StageDirector director = directorObject.AddComponent<StageDirector>();
-            director.player = player.GetComponent<PlayerController>();
+            director.player = player;
             director.rod = rod;
 
             gameObject.AddComponent<CombatHud>();
@@ -99,38 +106,6 @@ namespace FishingPrototype
 
             GameObject stripe = CreateVisual("Sprite_GroundEdge", new Vector2(17f, -2f), new Vector2(78f, 0.08f), new Color(0.33f, 0.78f, 0.68f));
             stripe.GetComponent<SpriteRenderer>().sortingOrder = 1;
-        }
-
-        private static GameObject CreatePlayer(Vector2 position)
-        {
-            GameObject player = CreateVisual("Player_Fisher", position, new Vector2(0.85f, 1.55f), new Color(0.2f, 0.72f, 0.95f));
-            Rigidbody2D rb = player.AddComponent<Rigidbody2D>();
-            rb.mass = 1.2f;
-            rb.freezeRotation = true;
-            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            BoxCollider2D col = player.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(0.9f, 1f);
-            PlayerController controller = player.AddComponent<PlayerController>();
-            player.AddComponent<PlayerHealth>();
-            player.AddComponent<PlayerAppearance>();
-            Camera.main.GetComponent<SmoothCameraFollow>().target = player.transform;
-
-            GameObject rod = CreateVisual("Weapon_FishingRod", position, new Vector2(1.25f, 0.09f), new Color(0.93f, 0.74f, 0.31f));
-            rod.transform.SetParent(player.transform, false);
-            rod.transform.localPosition = new Vector3(0.52f, 0.28f, 0f);
-            rod.GetComponent<SpriteRenderer>().sortingOrder = 7;
-            controller.rodVisual = rod.transform;
-            CombatShapes.DressRod(rod);
-            return player;
-        }
-
-        private static FishingRodController CreateFishingRod(GameObject player)
-        {
-            GameObject system = new GameObject("System_FishingRod");
-            FishingRodController rod = system.AddComponent<FishingRodController>();
-            rod.player = player.GetComponent<PlayerController>();
-            rod.rodVisual = player.GetComponent<PlayerController>().rodVisual;
-            return rod;
         }
 
         public static GameObject CreateHookable(string name, Vector2 position, Vector2 scale, Color color,

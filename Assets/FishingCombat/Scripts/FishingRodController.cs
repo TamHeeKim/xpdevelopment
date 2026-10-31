@@ -60,6 +60,7 @@ namespace FishingPrototype
         private HookableBody hooked;
         private Vector2 aim = Vector2.right;
         private float rodFacing = 1f;
+        private Vector3 rodPosition, rodScale, rodAngles;
         private float ropeLength = 4f;
         private float whipStarted;
         private float whipProgress;
@@ -75,6 +76,15 @@ namespace FishingPrototype
 
         private void Start()
         {
+            if (!player || !rodVisual)
+            {
+                Debug.LogError("낚싯대 프리팹의 플레이어와 외형 연결을 확인하세요.", this);
+                enabled = false;
+                return;
+            }
+            rodPosition = rodVisual.localPosition;
+            rodScale = rodVisual.localScale;
+            rodAngles = rodVisual.localEulerAngles;
             CreateTip();
             CreateLine();
             var marker = new GameObject("Line_AimOutline"); marker.transform.SetParent(transform);
@@ -189,12 +199,9 @@ namespace FishingPrototype
         {
             if (!rodVisual) return;
             if (Mathf.Abs(player.Body.linearVelocity.x) > 0.2f) rodFacing = Mathf.Sign(player.Body.linearVelocity.x);
-            rodVisual.localPosition = new Vector3(0.52f * rodFacing, 0.28f, 0f);
-            rodVisual.localRotation = Quaternion.Euler(0f, 0f, 35f * rodFacing);
-            Vector3 scale = rodVisual.localScale;
-            scale.x = Mathf.Abs(scale.x) * rodFacing;
-            scale.y = Mathf.Abs(scale.y);
-            rodVisual.localScale = scale;
+            rodVisual.localPosition = new Vector3(rodPosition.x * rodFacing, rodPosition.y, rodPosition.z);
+            rodVisual.localRotation = Quaternion.Euler(rodAngles.x, rodAngles.y, rodAngles.z * rodFacing);
+            rodVisual.localScale = new Vector3(rodScale.x * rodFacing, rodScale.y, rodScale.z);
         }
 
         private Vector2 RodAnchor => rodVisual ? (Vector2)rodVisual.TransformPoint(Vector3.right * 0.5f) : (Vector2)player.transform.position;
