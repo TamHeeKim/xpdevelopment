@@ -41,7 +41,7 @@ namespace FishingPrototype
 
         private HookableBody charging;
         private float charge;
-        private LineRenderer outline;
+        [SerializeField] private LineRenderer outline;
         public float CaptureProgress => charging ? Mathf.Clamp01(charge / 0.8f) : 0f;
         public string HeldName => hooked ? hooked.DisplayName : "";
         public string EquipmentName => CombatText.Get("equipment.bobber");
@@ -53,12 +53,14 @@ namespace FishingPrototype
         private HookableBody captureCandidate;
         private float candidateUntil;
         private RodState state;
-        private Rigidbody2D tipBody;
-        private CircleCollider2D tipCollider;
-        private LineRenderer line;
-        private LineRenderer strikeLine;
+        [SerializeField] private Rigidbody2D tipBody;
+        [SerializeField] private CircleCollider2D tipCollider;
+        [SerializeField] private LineRenderer line;
+        [SerializeField] private LineRenderer strikeLine;
         private HookableBody hooked;
         private Vector2 aim = Vector2.right;
+        [Header("포획 효과음")]
+        public AudioSource captureAudio;
         private float rodFacing = 1f;
         private Vector3 rodPosition, rodScale, rodAngles;
         private float ropeLength = 4f;
@@ -85,12 +87,10 @@ namespace FishingPrototype
             rodPosition = rodVisual.localPosition;
             rodScale = rodVisual.localScale;
             rodAngles = rodVisual.localEulerAngles;
-            CreateTip();
-            CreateLine();
-            var marker = new GameObject("Line_AimOutline"); marker.transform.SetParent(transform);
-            outline = marker.AddComponent<LineRenderer>(); outline.material = line.material;
-            outline.positionCount = 5; outline.startWidth = outline.endWidth = 0.04f;
-            outline.startColor = outline.endColor = Color.cyan;
+            if (!tipBody || !tipCollider || !line || !strikeLine || !outline)
+                throw new System.InvalidOperationException("낚싯줄 프리팹 연결이 누락되었습니다.");
+            Physics2D.IgnoreCollision(tipCollider, player.GetComponent<Collider2D>());
+            tipBody.position = RodAnchor + aim * idleLength;
         }
 
         private void Update()
@@ -205,51 +205,6 @@ namespace FishingPrototype
         }
 
         private Vector2 RodAnchor => rodVisual ? (Vector2)rodVisual.TransformPoint(Vector3.right * 0.5f) : (Vector2)player.transform.position;
-
-        private void CreateTip()
-        {
-            GameObject tip = PrototypeBootstrap.CreateVisual("Sprite_LineEnd", RodAnchor + aim * idleLength,
-                Vector2.one * 0.18f, new Color(0.95f, 0.85f, 0.38f));
-            tip.transform.SetParent(transform);
-            tip.GetComponent<SpriteRenderer>().sortingOrder = 5;
-            tipBody = tip.AddComponent<Rigidbody2D>();
-            tipBody.bodyType = RigidbodyType2D.Kinematic;
-            tipBody.gravityScale = 0.25f;
-            tipBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            tipCollider = tip.AddComponent<CircleCollider2D>();
-            tipCollider.isTrigger = true;
-            tipCollider.radius = 1.1f;
-            TipContact relay = tip.AddComponent<TipContact>();
-            relay.owner = this;
-            Physics2D.IgnoreCollision(tipCollider, player.GetComponent<Collider2D>());
-
-        }
-
-        private void CreateLine()
-        {
-            line = gameObject.AddComponent<LineRenderer>();
-            line.useWorldSpace = true;
-            line.positionCount = linePoints;
-            line.startWidth = 0.055f;
-            line.endWidth = 0.035f;
-            line.material = new Material(Shader.Find("Sprites/Default"));
-            line.startColor = new Color(0.82f, 0.91f, 0.96f);
-            line.endColor = new Color(0.48f, 0.7f, 0.78f);
-            line.sortingOrder = 2;
-
-            GameObject strikeObject = new GameObject("Line_StrikeZone");
-            strikeObject.transform.SetParent(transform, false);
-            strikeLine = strikeObject.AddComponent<LineRenderer>();
-            strikeLine.useWorldSpace = true;
-            strikeLine.positionCount = attackSamples;
-            strikeLine.startWidth = 0.045f;
-            strikeLine.endWidth = 0.095f;
-            strikeLine.material = line.material;
-            strikeLine.startColor = new Color(0.74f, 0.88f, 0.9f, 0.7f);
-            strikeLine.endColor = new Color(1f, 0.8f, 0.28f, 1f);
-            strikeLine.sortingOrder = 3;
-            strikeLine.enabled = false;
-        }
 
         private void StartWhip()
         {
@@ -445,10 +400,7 @@ namespace FishingPrototype
             hooked = target;
             hooked.SetHooked(true);
             CameraShake.Pulse(0.15f);
-            var sound = AudioClip.Create("Audio_Capture", 2205, 1, 22050, false);
-            var samples = new float[2205];
-            for (int i = 0; i < samples.Length; i++) samples[i] = Mathf.Sin(i * 0.18f) * 0.1f * (1f - i / 2205f);
-            sound.SetData(samples, 0); AudioSource.PlayClipAtPoint(sound, Camera.main.transform.position); Destroy(sound, 1f);
+            if (captureAudio) captureAudio.Play();
             ropeLength = Mathf.Clamp(Vector2.Distance(RodAnchor, target.Body.position), 1.5f, maxWhipLength);
             target.Body.linearVelocity += tipVelocity * 0.24f;
             state = RodState.Hooked;
@@ -591,10 +543,4 @@ namespace FishingPrototype
         }
     }
 
-    public sealed class TipContact : MonoBehaviour
-    {
-        [UnityEngine.Serialization.FormerlySerializedAs("Owner")]
-        public FishingRodController owner;
-        private void OnTriggerEnter2D(Collider2D other) => owner.HandleTipContact(other);
-    }
 }

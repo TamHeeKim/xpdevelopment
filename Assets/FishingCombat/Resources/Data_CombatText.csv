@@ -40,3 +40,4 @@ hud.help_toggle,H  조작 안내 {0},
 health.value,체력  {0} / {1},
 wave.approach_count,{0} · 적 접근 중  {1}/{2},
 wave.remaining_count,{0} · 남은 적 {1},
+hud.health_value,{0} / {1},{0} / {1}

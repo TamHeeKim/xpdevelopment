@@ -46,13 +46,14 @@ namespace FishingPrototype.Editor
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
             }
+            CombatSceneBuilder.UpgradePlayer();
             AssetDatabase.SaveAssets();
             Check();
         }
 
         private static void CreateRod(Scene preview)
         {
-            var rod = PrototypeBootstrap.CreateVisual("Weapon_FishingRod", Vector2.zero,
+            var rod = CombatAuthoring.CreateVisual("Weapon_FishingRod", Vector2.zero,
                 new Vector2(1.25f, 0.09f), new Color(0.93f, 0.74f, 0.31f));
             SceneManager.MoveGameObjectToScene(rod, preview);
             rod.GetComponent<SpriteRenderer>().sortingOrder = 7;
@@ -64,7 +65,7 @@ namespace FishingPrototype.Editor
 
         private static void CreatePlayer(Scene preview)
         {
-            var player = PrototypeBootstrap.CreateVisual("Player_Fisher", Vector2.zero,
+            var player = CombatAuthoring.CreateVisual("Player_Fisher", Vector2.zero,
                 new Vector2(0.85f, 1.55f), new Color(0.2f, 0.72f, 0.95f));
             SceneManager.MoveGameObjectToScene(player, preview);
             var body = player.AddComponent<Rigidbody2D>();
@@ -94,7 +95,7 @@ namespace FishingPrototype.Editor
             UnityEngine.Object.DestroyImmediate(player);
         }
 
-        private static void BakeSprites(GameObject root, string group)
+        public static void BakeSprites(GameObject root, string group)
         {
             var saved = new Dictionary<Sprite, Sprite>();
             foreach (var renderer in root.GetComponentsInChildren<SpriteRenderer>(true))

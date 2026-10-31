@@ -37,7 +37,6 @@ namespace FishingPrototype
         private SpriteRenderer visual;
         private Vector2 spawnPosition;
         private Quaternion spawnRotation;
-        private TextMesh label;
         private Coroutine flashRoutine;
         private bool respawning;
         private Collider2D hookedPlayerCollider;
@@ -47,29 +46,10 @@ namespace FishingPrototype
         {
             Body = GetComponent<Rigidbody2D>();
             visual = GetComponent<SpriteRenderer>();
+            baseColor = visual.color;
             health = maxHealth;
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
-            CreateLabel();
-        }
-
-        private void CreateLabel()
-        {
-            GameObject go = new GameObject("Text_Status");
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = new Vector3(0f, 0.72f, 0f);
-            go.transform.localScale = new Vector3(1f / transform.localScale.x, 1f / transform.localScale.y, 1f);
-            label = go.AddComponent<TextMesh>();
-            label.font = PrototypeBootstrap.KoreanFont;
-            label.GetComponent<MeshRenderer>().sharedMaterial = PrototypeBootstrap.KoreanFont.material;
-            label.GetComponent<MeshRenderer>().enabled = false;
-            label.anchor = TextAnchor.LowerCenter;
-            label.alignment = TextAlignment.Center;
-            label.fontSize = 42;
-            label.characterSize = 0.065f;
-            label.color = new Color(0.92f, 0.96f, 1f);
-            label.GetComponent<MeshRenderer>().sortingOrder = 10;
-            RefreshLabel();
         }
 
         public void SetHooked(bool value)
@@ -94,7 +74,6 @@ namespace FishingPrototype
                 hookedPlayerCollider = null;
             }
             IsHooked = value;
-            RefreshLabel();
         }
 
         public void Configure(BodyKind kind, Color color, float maxHealth, bool respawn)
@@ -105,14 +84,12 @@ namespace FishingPrototype
             health = this.maxHealth;
             respawnOnDeath = respawn;
             if (visual) visual.color = baseColor;
-            RefreshLabel();
         }
 
         public void ReceiveDamage(float damage, Vector2 hitPoint)
         {
             if (kind == BodyKind.Prop || respawning || damage <= 0f) return;
             health -= damage;
-            RefreshLabel();
             if (flashRoutine != null) StopCoroutine(flashRoutine);
             flashRoutine = StartCoroutine(Flash());
             if (health <= 0f && !respawning) StartCoroutine(Respawn());
@@ -182,16 +159,9 @@ namespace FishingPrototype
             foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = true;
             GetComponent<Collider2D>().enabled = true;
             respawning = false;
-            RefreshLabel();
         }
 
-        public void SetDisplayNameKey(string key) { displayNameKey = key; RefreshLabel(); }
+        public void SetDisplayNameKey(string key) { displayNameKey = key; }
 
-        private void RefreshLabel()
-        {
-            if (!label) return;
-            string type = DisplayName;
-            label.text = type + "  " + Mathf.CeilToInt(Mathf.Max(0f, health)) + (IsHooked ? CombatText.Get("status.hooked_suffix") : "");
-        }
     }
 }

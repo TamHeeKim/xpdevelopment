@@ -13,40 +13,21 @@ namespace FishingPrototype
 
         private Rigidbody2D body;
         private SpriteRenderer visual;
+        private Color baseColor;
         private Vector2 checkpoint;
-        private TextMesh healthText;
         private bool recovering;
 
         private void Awake()
         {
             body = GetComponent<Rigidbody2D>();
             visual = GetComponent<SpriteRenderer>();
+            baseColor = visual.color;
             Health = maxHealth;
             checkpoint = transform.position;
         }
 
-        private void Start() => CreateHud();
-
-        private void CreateHud()
-        {
-            GameObject go = new GameObject("Text_Health");
-            go.transform.SetParent(Camera.main.transform, false);
-            go.transform.localPosition = new Vector3(4.7f, 4.72f, 10f);
-            healthText = go.AddComponent<TextMesh>();
-            healthText.font = PrototypeBootstrap.KoreanFont;
-            healthText.GetComponent<MeshRenderer>().sharedMaterial = PrototypeBootstrap.KoreanFont.material;
-            healthText.GetComponent<MeshRenderer>().enabled = false;
-            healthText.anchor = TextAnchor.UpperRight;
-            healthText.alignment = TextAlignment.Right;
-            healthText.fontSize = 42;
-            healthText.characterSize = 0.05f;
-            healthText.color = new Color(0.3f, 0.9f, 1f);
-            healthText.GetComponent<MeshRenderer>().sortingOrder = 110;
-            RefreshHud();
-        }
-
         public void SetCheckpoint(Vector2 point) => checkpoint = point;
-        public void Heal() { Health = maxHealth; RefreshHud(); }
+        public void Heal() { Health = maxHealth;  }
 
         public void ReceiveDamage(float damage, Vector2 knockback)
         {
@@ -56,7 +37,7 @@ namespace FishingPrototype
             CameraShake.Pulse(Mathf.Clamp01(damage / 30f));
             GetComponent<PlayerAppearance>()?.Flash();
             StartCoroutine(HitFlash());
-            RefreshHud();
+
             if (Health <= 0f) StartCoroutine(Recover());
         }
 
@@ -64,7 +45,7 @@ namespace FishingPrototype
         {
             visual.color = Color.white;
             yield return new WaitForSeconds(0.1f);
-            visual.color = new Color(0.2f, 0.72f, 0.95f);
+            visual.color = baseColor;
         }
 
         private IEnumerator Recover()
@@ -84,12 +65,8 @@ namespace FishingPrototype
             recovering = false;
             GetComponent<PlayerController>().ControlsLocked = false;
             FindFirstObjectByType<StageDirector>().ResetEncounter();
-            RefreshHud();
+
         }
 
-        private void RefreshHud()
-        {
-            if (healthText) healthText.text = CombatText.Format("health.value", Mathf.CeilToInt(Health), Mathf.CeilToInt(maxHealth));
-        }
     }
 }

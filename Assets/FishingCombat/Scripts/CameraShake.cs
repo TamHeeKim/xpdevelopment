@@ -3,21 +3,6 @@ using UnityEngine;
 
 namespace FishingPrototype
 {
-    public sealed class SmoothCameraFollow : MonoBehaviour
-    {
-        [UnityEngine.Serialization.FormerlySerializedAs("Target")]
-        [Header("추적 대상")]
-        public Transform target;
-        private Vector3 velocity;
-
-        private void LateUpdate()
-        {
-            if (!target) return;
-            Vector3 desired = new Vector3(target.position.x + 2.2f, 0.35f, -10f);
-            transform.position = Vector3.SmoothDamp(transform.position, desired, ref velocity, 0.24f);
-        }
-    }
-
     public sealed class CameraShake : MonoBehaviour
     {
         private static CameraShake instance;

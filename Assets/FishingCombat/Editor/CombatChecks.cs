@@ -133,6 +133,8 @@ namespace FishingPrototype.Editor
             typeof(HookableBody).GetField("<Body>k__BackingField", flags).SetValue(gasBody, gasEnemyObject.GetComponent<Rigidbody2D>());
             var gasAI = gasEnemyObject.AddComponent<TangEnemyAI>();
             gasAI.player = gasPlayer;
+            gasAI.poisonCloudPrefab = CombatSceneBuilder.Prefab("EnemyPoison").GetComponent<PoisonCloud>();
+            gasAI.shurikenPrefab = CombatSceneBuilder.Prefab("Shuriken").GetComponent<Shuriken>();
             typeof(TangEnemyAI).GetMethod("Start", flags).Invoke(gasAI, null);
             var gasTick = typeof(TangEnemyAI).GetMethod("FixedUpdate", flags);
             var gasState = typeof(TangEnemyAI).GetField("state", flags);
@@ -175,7 +177,7 @@ namespace FishingPrototype.Editor
             smokeBottleObject.AddComponent<BoxCollider2D>();
             var smokeBottle = smokeBottleObject.AddComponent<PoisonBottle>();
             smokeBottleBody.SetHooked(true);
-            PoisonCloud.Spawn(Vector2.zero, true);
+            PoisonCloud.Spawn(CombatSceneBuilder.Prefab("CounterPoison").GetComponent<PoisonCloud>(), Vector2.zero);
             var counterCloud = UnityEngine.Object.FindFirstObjectByType<PoisonCloud>();
             typeof(PoisonCloud).GetMethod("Start", flags).Invoke(counterCloud, null);
             Physics2D.SyncTransforms();
