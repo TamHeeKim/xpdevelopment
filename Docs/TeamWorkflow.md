@@ -21,6 +21,8 @@ commit-msg는 제목 형식을, pre-push는 보호 브랜치 및 feature 이름�
 
 ## 커밋 헤더
 
+헤더별 용도와 커밋·푸시 절차는 [커밋 메시지 규칙](CommitConvention.md)을 따른다.
+
 | 헤더 | 용도 |
 | --- | --- |
 | [TEST] | 테스트 코드 |

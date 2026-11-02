@@ -7,6 +7,7 @@
 - 기능은 develop 대상 PR로 제출한다. 브랜치 병합은 PR로만 수행하고 최소 1명의 리뷰 승인을 받는다.
 - main과 develop에 직접 푸시하지 않는다. 권한이 없으면 원격 보호 규칙을 설정했다고 주장하지 않는다.
 - 커밋 제목: [TEST], [MERGE], [BUILD], [INIT], [DOC], [REFAC], [FIX], [MOD], [ADD], [FEAT] 뒤 공백과 설명.
+- 커밋 헤더별 용도는 [Docs/CommitConvention.md](Docs/CommitConvention.md)를 따른다. 앞으로 작업 범위의 변경을 검증한 뒤 이 규칙으로 커밋 메시지를 작성하고 해당 기능 브랜치에 푸시한다.
 - 1주 또는 2주 스프린트로 진행하고 Docs/Sprint-01.md의 작업·검증 상태를 갱신한다.
 - 생성하는 오브젝트는 형식_이름. 예: Player_Fisher, Prop_PoisonBottle, Text_Objective. 표시 이름은 별도 CSV 키로 관리한다.
 - 변수와 필드는 camelCase. 클래스·메서드·프로퍼티는 기존 C# PascalCase를 유지한다.
