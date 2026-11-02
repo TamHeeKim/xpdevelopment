@@ -1,0 +1,2 @@
+enemyId,chapter,faction,name,hp,attack,defense,moveSpeed
+ENEMY_CH01_DANGGA_001,1,사천당가,Dangga,60.,12.,20.,3.

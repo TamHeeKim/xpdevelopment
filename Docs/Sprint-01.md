@@ -15,7 +15,7 @@
 | 원격 develop 초기 생성·보호 규칙 | 관리자 작업 필요 | PR 필수·승인 1명·직접 푸시 차단 |
 | PR 리뷰·병합 | 미진행 | 최소 1명 승인 후 develop에 PR 병합 |
 
-범위 제외: 밸런스 SO/스프레드시트 연결, 기본 PoC 수정, Linebreaker 수정, 새 전투 규칙.
+범위 제외: 기존 전투 씬/프리팹의 밸런스 SO 전환, 기본 PoC 수정, Linebreaker 수정, 새 전투 규칙.
 
 검증 기록: 전투·CSV 회귀 검사, 로컬 훅 차단 검사, 씬 초기화 검사 통과. 기본 PoC/Linebreaker/전투 씬 원본 해시 유지. 검증용 Unity의 검색 인덱스 내부 예외 1건은 게임 코드 밖에서 발생했으며 플레이 초기화 검사는 통과했다. 실제 UI 배치·조작감 검증은 미완료.
 
@@ -28,5 +28,11 @@
 - 미사용 코드 정리 완료: 근접 AI·지형 마커·옛 출현 함수·미사용 분기·중복 외형 참조·미사용 피해 인자 삭제. 프리팹과 호출부 갱신. 전투/프리팹 검사, 별도 Unity 프로젝트 Play 검증, Windows64 빌드 통과. 검증 에디터 SearchDatabase 인덱스 예외는 이전과 동일하며 게임 Play 검사는 통과. 장시간 수동 플레이 미검증.
 
 - 포획 시 찌 표시 어긋남 및 수리검의 일반 오브젝트 충돌 수정. 포획/해제 표시·줄 끝 좌표, 반사 전후 오브젝트 충돌 제외 회귀 검사 추가. 전투·프리팹 검사 및 Windows 빌드 통과.
+
+- 시트 연결(2026-11-02): feature/spreadsheet-integration에서 플레이어·적 탭 CSV 다운로드 메뉴와 최초 CSV 추가. 비로그인 CSV 응답·헤더 확인 및 Unity 6000.3.11f1 참조 어셈블리 기반 C# 컴파일 통과. 게임 수치 적용은 범위 제외. Unity 메뉴 실행 검증은 대기.
+
+- Integration 시트 테스트(2026-11-02): 연결 관련 스크립트를 Assets/Externals/Scripts 및 Editor 하위로 이동·추가하고 Integration.unity에 Enemy_TableDummy 배치. Play에서 실제 시트 연결 성공 및 플레이어·적 전체 스탯 로그 확인. 적 hp=60 초기화, Input System F키 이벤트로 60→50→…→0, 키 유지 시 반복 차감 없음, 0 하한, 실제 프레임 진행 검사 통과. 원본 시트 쓰기 및 기존 전투 씬 변경 없음.
+
+- SO·Play 자동 갱신(2026-11-02): 플레이어·적 시트의 모든 행을 Assets/Externals/Data/Stats의 CombatStatDefinition SO로 가져오고, Assets/Externals/Scenes/Integration.unity의 적에 SO 할당 완료. Play 시작 및 완료 후 5초마다 시트 조회, 변경된 값만 영구 SO 에셋에 저장·적에 반영. 최대 체력 갱신은 기존 피해량을 보존하며 F키 피해는 인스턴스에서만 관리. 실제 원본 자동 조회 2회, 로컬 CSV 변경 입력에 대한 SO 갱신/참조 GUID 유지/60→80 최대 체력 변경 시 피해 10 보존(70/80), 변경 없음 건너뛰기, 잘못된 값 거부, F키·체력 0 하한 검사 통과. 테스트 데이터는 로컬에서 원래 SO 값으로 복구했으며 원본 시트 쓰기 없음. Unity 컴파일 및 diff 검사 통과.
 
 - 커밋 규칙 문서화(2026-11-03): Docs/CommitConvention.md 추가 및 AGENTS.md·TeamWorkflow.md 연결. 기존 commit-msg/pre-push 훅 활성화와 문서 형식 확인 완료.

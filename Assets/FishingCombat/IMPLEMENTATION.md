@@ -89,3 +89,16 @@ Canvas와 맵을 함께 렌더링해 표시를 확인했다. 다양한 해상도
 이전 근접 AI와 GroundSurface 마커를 제거했다. 적 종류는 출현 시 일반/무거운 프리팹 선택으로 처리한다. 낚싯대 외형 참조는 FishingRodController에만 둔다. 설정되지 않던 운동량 유지·낚싯대 잠금 분기와 피해 위치 매개변수를 제거했다. PlayerController의 사망 복귀용 입력 잠금은 유지한다. 출현 검사는 ChooseSpawnPoint를 호출해 편집된 마커의 좌표·높이와 동거리 선택을 검증한다.
 
 포획/포획 대기 중 찌 스프라이트를 숨기고, LateUpdate에서 줄 끝을 대상의 렌더링 Transform 위치에 맞춘다. 해제하면 찌 표시를 복원한다. 수리검은 생성 시 배치된 일반 포획 오브젝트의 콜라이더를 무시하며 반사 후에도 유지한다. 지형 충돌과 반사 후 적 피해는 유지한다.
+
+## 데이터 테이블 시트 연결
+
+- 원본: https://docs.google.com/spreadsheets/d/1TyjqkiLVNg_shUpMejZh3StgU6b0RJoVzFeIXk8NIrs/edit
+- Unity 메뉴: 낚싯대 전투 > 데이터 테이블 > 시트에서 SO 가져오기. 플레이어(gid=8201)·적(gid=8202)의 모든 행을 CombatStatDefinition SO로 생성/갱신한다.
+- SO 위치: Assets/Externals/Data/Stats/Player 및 Enemy. 행 ID별 기존 에셋을 갱신해 GUID와 적의 참조를 유지한다. 시트에서 삭제한 행의 기존 SO는 자동 삭제하지 않는다. ID 변경은 새 에셋으로 취급하므로 적에 새 SO를 할당한다.
+- Integration 씬 위치: Assets/Externals/Scenes/Integration.unity. Enemy_TableDummy의 statDefinition에 적 SO를 할당했다. 다른 적에도 Inspector의 스탯 SO 필드에 원하는 적 SO를 드래그한다. Integration 테스트 적 배치 메뉴는 기존 enemyId를 SO 참조로 이관한다.
+- Play 시작 시 할당된 SO로 초기화하고, Editor 전용 CombatSheetConnection이 즉시 및 완료 후 5초마다 원본 두 탭을 조회한다. 변경된 값만 SO에 저장하고 Changed 이벤트로 적에게 반영한다. 빌드는 저장된 SO를 사용하며 시트 네트워크 동기화를 포함하지 않는다.
+- 연결 중·성공·실패와 변경된 SO의 전체 스탯을 Console에 출력한다. 값이 같으면 저장/스탯 로그/적 초기화를 반복하지 않는다. 통신 실패나 잘못된 헤더·빈 테이블·중복 ID·잘못된 숫자는 기존 SO를 유지하고 재시도한다. 두 테이블의 값 검증을 먼저 완료한 뒤 갱신한다. Play 종료/컴파일 시 진행 중 요청을 취소한다.
+- 스크립트는 Assets/Externals/Scripts 아래에 있다. CombatSheetData는 시트 주소·CSV 파싱, CombatStatDefinition/CombatStatValues는 SO와 수치 검증, IntegrationEnemy는 SO 참조·체력·F키, Editor/CombatSheetConnection은 가져오기·주기 갱신·SO 저장을 담당한다.
+- 현재 체력은 적 인스턴스에만 저장한다. F키는 10 피해를 주며 0 하한을 적용한다. hp 변경 시 기존 피해량을 유지한다(60/60에서 10 피해 후 시트 hp=80으로 변경하면 70/80). 이미 체력이 0이면 hp 증가로 부활하지 않는다. attack/defense/moveSpeed는 SO의 최신 값으로 조회하며 이 테스트 적에는 이동·공격 AI를 추가하지 않았다.
+- Play 중 가져온 원본 스탯은 SO 에셋에 저장되어 종료 후에도 유지된다. 원본 시트에는 쓰지 않는다. CSV 파일은 이전 연결의 참고 스냅샷이며 현재의 데이터 소비 경로는 SO이다. 기존 전투 씬·프리팹·표시 텍스트 CSV는 변경하지 않는다.
+- 검사: 낚싯대 전투 > 데이터 테이블 > Integration F키 검사 (Play). 실제 프레임 진행과 F 누름/유지/해제, 체력 0 하한, 변경 없음 처리, SO 참조/GUID 유지, 수치 변경 반영과 피해량 보존, 잘못된 데이터 거부를 검사한다. 테스트 데이터는 로컬 가져오기 경로에만 넣고 원래 SO 값을 복구한다. 원본 시트를 수정하지 않는다.
