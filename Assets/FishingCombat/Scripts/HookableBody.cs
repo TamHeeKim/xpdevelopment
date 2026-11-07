@@ -28,6 +28,7 @@ namespace FishingPrototype
         public float Health => health;
         public Rigidbody2D Body { get; private set; }
         public bool IsHooked { get; private set; }
+        public event System.Action<Collider2D> HeldContact;
         [UnityEngine.Serialization.FormerlySerializedAs("ThrowDamageDuration")]
         [Header("투척 피해")]
         public float throwDamageDuration = 2f;
@@ -115,8 +116,13 @@ namespace FishingPrototype
             impactTimes.Clear();
         }
 
+        private void OnCollisionStay2D(Collision2D collision)
+        {
+            if (IsHooked) HeldContact?.Invoke(collision.collider);
+        }
         private void OnCollisionEnter2D(Collision2D collision)
         {
+            if (IsHooked) { HeldContact?.Invoke(collision.collider); return; }
             float speed = collision.relativeVelocity.magnitude;
             if (speed < 4.5f || IsHooked || !IsThrown || respawning || GetComponent<Shuriken>()) return;
             if (collision.collider.GetComponent<PlayerController>()) return;

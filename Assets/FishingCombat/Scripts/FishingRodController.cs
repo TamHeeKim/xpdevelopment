@@ -28,6 +28,10 @@ namespace FishingPrototype
         [Min(0.1f)] public float throwSpeed = 12f;
         [Min(0.05f)] public float slamDuration = 0.4f;
         public float idleLength = 1.65f;
+        [Header("낚싯줄 물리")]
+        [Min(0.1f)] public float swingForce = 27f;
+        [Min(0)] public float holdDamping = 4f;
+        [Min(0.1f)] public float reelSpeed = 3.8f;
         private const float baseHoldTime = 0.3f, attackDuration = 0.5f;
         public float Attack => statDefinition ? statDefinition.Values.attack : attack;
         public float AttackWidth => statDefinition && statDefinition.Values.attackWidth > 0 ? statDefinition.Values.attackWidth : attackWidth;
@@ -40,7 +44,8 @@ namespace FishingPrototype
         private HookableBody target, hooked, slamTarget;
         private float pressedAt, attackUntil = float.NegativeInfinity, slamStarted, slamAttack;
         private Vector2 tipPosition;
-        private Vector2 aim = Vector2.right, attackStart, attackEnd, holdDirection, slamStart, slamEnd;
+        private Vector2 aim = Vector2.right, attackStart, attackEnd, slamStart, slamEnd;
+        private float ropeLength, desiredRopeLength, castStarted = float.NegativeInfinity, castSide = 1f;
         private readonly HashSet<HookableBody> attackHits = new HashSet<HookableBody>();
         private RigidbodyType2D savedBodyType;
         private bool bodyClaimed;
@@ -82,10 +87,15 @@ namespace FishingPrototype
             else if (state == RodState.Held)
             {
                 if (!Alive(hooked)) { CancelCapture(); return; }
-                hooked.Body.position = (Vector2)player.transform.position + holdDirection * (CatchRange * 0.5f);
+                ropeLength = Mathf.MoveTowards(ropeLength, desiredRopeLength, reelSpeed * Time.fixedDeltaTime);
+                PullBody(hooked, (Vector2)player.transform.position + aim * ropeLength, swingForce, holdDamping);
+                Vector2 stretch = hooked.Body.position - (Vector2)player.transform.position;
+                if (stretch.magnitude > ropeLength)
+                    hooked.Body.AddForce(-stretch.normalized * (stretch.magnitude - ropeLength) * 95f * hooked.Body.mass);
             }
             else if (state == RodState.Slamming) TickSlam();
-            else tipPosition = Time.time < attackUntil ? attackEnd : RodAnchor + aim * idleLength;
+            else if (Time.time < attackUntil) UpdateCastTip(attackEnd);
+            else tipPosition = Vector2.Lerp(tipPosition, RodAnchor + aim * idleLength, 0.28f);
         }
         private void LateUpdate()
         {
@@ -130,12 +140,13 @@ namespace FishingPrototype
             target = SelectCatchTarget(cursor);
             if (!target) return;
             pressedAt = Time.time;
-            tipPosition = RodAnchor;
+            castStarted = Time.time;
             state = RodState.Extending;
         }
         private void BeginAttack(Vector2 cursor)
         {
             attackStart = RodAnchor; attackEnd = cursor; attackUntil = Time.time + attackDuration; attackHits.Clear();
+            castStarted = Time.time; castSide *= -1f;
             Vector2 delta = attackEnd - attackStart;
             PositionAttackCollider();
             Vector3 scale = attackCollider.transform.lossyScale;
@@ -165,7 +176,7 @@ namespace FishingPrototype
             { CancelCapture(); return; }
             if (state == RodState.Extending)
             {
-                tipPosition = Vector2.MoveTowards(tipPosition, target.Body.position, lineSpeed * Time.fixedDeltaTime);
+                UpdateCastTip(target.Body.position);
                 if (Vector2.Distance(tipPosition, target.Body.position) > 0.02f) return;
                 ClaimBody(target); state = RodState.Catching;
             }
@@ -174,26 +185,25 @@ namespace FishingPrototype
         private void ClaimBody(HookableBody body)
         {
             savedBodyType = body.Body.bodyType; bodyClaimed = true;
-            body.SetHooked(true); body.Body.linearVelocity = Vector2.zero; body.Body.angularVelocity = 0;
-            body.Body.bodyType = RigidbodyType2D.Kinematic;
+            body.SetHooked(true);
+            body.HeldContact += OnHeldContact;
         }
         private void CompleteCapture()
         {
             hooked = target;
-            holdDirection = ((Vector2)hooked.transform.position - (Vector2)player.transform.position).normalized;
-            if (holdDirection.sqrMagnitude < 0.001f) holdDirection = Vector2.right * rodFacing;
             RestoreHoldDistance(); state = RodState.Held;
             if (captureAudio) captureAudio.Play();
         }
         private void RestoreHoldDistance()
         {
-            hooked.Body.position = (Vector2)player.transform.position + holdDirection * (CatchRange * 0.5f);
-            hooked.Body.linearVelocity = Vector2.zero;
+            ropeLength = Vector2.Distance(player.transform.position, hooked.Body.position);
+            desiredRopeLength = CatchRange * 0.5f;
         }
         private void CancelCapture()
         {
             if (bodyClaimed && target)
             {
+                target.HeldContact -= OnHeldContact;
                 target.Body.bodyType = savedBodyType;
                 target.SetHooked(false); target.ClearThrow();
             }
@@ -225,34 +235,48 @@ namespace FishingPrototype
         private void TickSlam()
         {
             if (!Alive(hooked)) { CancelCapture(); return; }
-            float t = Mathf.Clamp01((Time.time - slamStarted) / Mathf.Max(0.05f, slamDuration));
+            float elapsed = Time.time - slamStarted;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.05f, slamDuration));
             Vector2 origin = player.transform.position;
             Vector2 destination = slamEnd - origin;
             float radius = CatchRange * 2f / 3f;
-            if (t < 0.25f) hooked.Body.position = Vector2.Lerp(slamStart, origin + Vector2.up * radius, t * 4f);
+            Vector2 desired;
+            if (t < 0.25f) desired = Vector2.Lerp(slamStart, origin + Vector2.up * radius, t * 4f);
             else
             {
                 float progress = (t - 0.25f) / 0.75f;
                 float angle = Mathf.Lerp(90f, Mathf.Atan2(destination.y, destination.x) * Mathf.Rad2Deg, progress) * Mathf.Deg2Rad;
                 float length = Mathf.Lerp(radius, destination.magnitude, progress);
-                hooked.Body.position = origin + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * length;
+                desired = origin + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * length;
             }
-            if (t >= 1f) FinishSlam();
+            PullBody(hooked, desired, swingForce * 3f, holdDamping * 2f);
+            // 충돌하지 않은 빗나간 내려찍기는 피해 없이 일반 포획으로 돌아간다.
+            if (elapsed > slamDuration + 1f) { RestoreHoldDistance(); state = RodState.Held; slamTarget = null; }
         }
-        private void FinishSlam()
+        private void PullBody(HookableBody body, Vector2 desired, float stiffness, float damping)
         {
+            Vector2 offset = desired - body.Body.position;
+            Vector2 relativeVelocity = body.Body.linearVelocity - player.Body.linearVelocity;
+            body.Body.AddForce((offset * stiffness - relativeVelocity * damping) * body.Body.mass);
+            player.Body.AddForce(-offset * 0.08f);
+        }
+        private void OnHeldContact(Collider2D collider)
+        {
+            if (state != RodState.Slamming || !Alive(hooked) || Time.time - slamStarted < slamDuration * 0.5f || hooked.Body.linearVelocity.y > 0.5f) return;
+            if (collider.isTrigger || collider.GetComponent<PlayerController>()) return;
+            var victim = collider.GetComponent<HookableBody>();
+            if (victim && (victim == hooked || victim.kind != HookableBody.BodyKind.Enemy || !Alive(victim))) return;
+            FinishSlam(victim);
+        }
+        private void FinishSlam(HookableBody victim)
+        {
+            if (state != RodState.Slamming || !Alive(hooked)) return;
+            state = RodState.Held;
             var held = hooked;
-            var victims = new HashSet<HookableBody>();
-            var hitbox = held.GetComponent<Collider2D>();
-            foreach (var col in Physics2D.OverlapBoxAll(held.Body.position, hitbox.bounds.size + Vector3.one * 0.15f, 0))
-            {
-                if (col.isTrigger) continue;
-                var victim = col.GetComponent<HookableBody>();
-                if (victim != held && Alive(victim) && victim.kind == HookableBody.BodyKind.Enemy && victims.Add(victim)) victim.ReceiveDamage(slamAttack * 1.1f);
-            }
+            if (Alive(victim)) victim.ReceiveDamage(slamAttack * 1.1f);
             if (held.kind == HookableBody.BodyKind.Enemy) held.ReceiveDamage(slamAttack * 1.2f);
             if (!Alive(held)) { CancelCapture(); return; }
-            RestoreHoldDistance(); state = RodState.Held; slamTarget = null;
+            RestoreHoldDistance(); slamTarget = null;
         }
         public Vector2 SelectThrowDirection(Vector2 direction)
         {
@@ -279,8 +303,11 @@ namespace FishingPrototype
             if (state != RodState.Held || !Alive(hooked)) return;
             Vector2 velocity = SelectThrowDirection(direction);
             var released = hooked; var star = released.GetComponent<Shuriken>();
+            float speed = star ? star.flySpeed * 2f : Mathf.Max(throwSpeed, released.Body.linearVelocity.magnitude);
+            released.HeldContact -= OnHeldContact;
             released.Body.bodyType = savedBodyType; released.SetHooked(false);
-            released.Body.linearVelocity = velocity * (star ? star.flySpeed * 2f : throwSpeed);
+            tipPosition = released.Body.position;
+            released.Body.linearVelocity = velocity * speed;
             bodyClaimed = false; hooked = target = null; state = RodState.Idle;
         }
         public void Interrupt()
@@ -297,15 +324,44 @@ namespace FishingPrototype
             outline.positionCount = 5;
             outline.SetPositions(new[] { new Vector3(b.min.x,b.min.y), new Vector3(b.min.x,b.max.y), new Vector3(b.max.x,b.max.y), new Vector3(b.max.x,b.min.y), new Vector3(b.min.x,b.min.y) });
         }
+        private void UpdateCastTip(Vector2 destination)
+        {
+            Vector2 offset = destination - RodAnchor;
+            float duration = Mathf.Max(0.42f, offset.magnitude / Mathf.Max(0.1f, lineSpeed));
+            float progress = Mathf.Clamp01((Time.time - castStarted) / duration);
+            float travel = Mathf.Pow(progress, 1.72f);
+            float angle = Mathf.Lerp(-95f * castSide, 0f, Mathf.SmoothStep(0, 1, travel)) * Mathf.Deg2Rad;
+            Vector2 direction = offset.sqrMagnitude > 0.0001f ? offset.normalized : aim;
+            Vector2 rotated = new Vector2(direction.x * Mathf.Cos(angle) - direction.y * Mathf.Sin(angle), direction.x * Mathf.Sin(angle) + direction.y * Mathf.Cos(angle));
+            float reach = Mathf.Lerp(Mathf.Min(0.85f, offset.magnitude), offset.magnitude, Mathf.Sin(progress * Mathf.PI * 0.5f));
+            tipPosition = RodAnchor + rotated * reach;
+        }
         private void DrawLine()
         {
             if (!line || !tipBody || !rodVisual) return;
             Vector2 end = bodyClaimed && target ? (Vector2)target.transform.position : tipPosition;
-            line.positionCount = 2; line.SetPosition(0, RodAnchor); line.SetPosition(1, end);
+            Vector2 start = RodAnchor;
+            float distance = Vector2.Distance(start, end);
+            float slack = hooked ? Mathf.Max(0f, ropeLength - distance) : 0.1f;
+            Vector2 control = (start + end) * 0.5f + Vector2.down * (0.08f + slack * 0.35f);
+            if (!bodyClaimed && Time.time - castStarted < 0.42f)
+            {
+                Vector2 direction = (end - start).normalized;
+                Vector2 normal = new Vector2(-direction.y, direction.x) * -castSide;
+                float progress = Mathf.Clamp01((Time.time - castStarted) / 0.42f);
+                control = Vector2.Lerp(start, end, 0.46f) + normal * distance * Mathf.Lerp(0.72f, 0.06f, Mathf.SmoothStep(0, 1, progress));
+            }
+            line.positionCount = 24;
+            for (int i = 0; i < line.positionCount; i++)
+            {
+                float t = i / (line.positionCount - 1f), u = 1f - t;
+                line.SetPosition(i, u * u * start + 2f * u * t * control + t * t * end);
+            }
             strikeLine.enabled = Time.time < attackUntil;
             if (strikeLine.enabled)
             {
-                strikeLine.positionCount = 2; strikeLine.startWidth = strikeLine.endWidth = AttackWidth;
+                strikeLine.positionCount = 2; strikeLine.startWidth = 0.035f; strikeLine.endWidth = 0.06f;
+                strikeLine.startColor = strikeLine.endColor = new Color(0.75f, 0.9f, 1f, 0.18f);
                 strikeLine.SetPosition(0, attackStart); strikeLine.SetPosition(1, attackEnd);
             }
         }
