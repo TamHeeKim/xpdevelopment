@@ -48,7 +48,7 @@ namespace FishingPrototype
             Vector2 origin = (Vector2)transform.position + Vector2.down * 0.72f;
             RaycastHit2D[] hits = Physics2D.RaycastAll(origin, Vector2.down, 0.18f);
             foreach (RaycastHit2D hit in hits)
-                if (hit.collider != null && hit.rigidbody != Body) return true;
+                if (hit.collider != null && !hit.collider.isTrigger && hit.rigidbody != Body) return true;
             return false;
         }
     }

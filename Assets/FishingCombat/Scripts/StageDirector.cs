@@ -52,7 +52,7 @@ namespace FishingPrototype
 
         private void Update()
         {
-            if ((Keyboard.current?.eKey.wasPressedThisFrame ?? false) &&
+            if ((Keyboard.current?.fKey.wasPressedThisFrame ?? false) &&
                 (player.transform.position.x < startCheckpoint.position.x + 3f || (waveOneCleared && Mathf.Abs(player.transform.position.x - middleCheckpoint.position.x) < 2f)))
             {
                 bool second = waveOneCleared && player.transform.position.x > combatGate.transform.position.x;

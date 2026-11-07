@@ -40,7 +40,7 @@ namespace FishingPrototype.Editor
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             Directory.CreateDirectory(prefabFolder);
             var scene = EditorSceneManager.OpenScene(scenePath);
-            BuildEffects(); BuildActors(); BuildLevel(); BuildCamera(); BuildSystems(); BuildHud(); UpgradePlayer();
+            BuildEffects(); BuildActors(); BuildLevel(); BuildCamera(); BuildSystems(); BuildHud(); UpgradePlayer(); PlayerCombatSetup.UpgradePrefabs();
             var player = UnityEngine.Object.FindFirstObjectByType<PlayerController>();
             if (!player) throw new Exception("플레이어 프리팹을 먼저 배치하세요.");
             var level = Instance("Level", "Environment_Level", scene);
@@ -211,7 +211,7 @@ namespace FishingPrototype.Editor
                 {
                     var tip=Visual("Sprite_LineEnd",Vector2.zero,Vector2.one*0.18f,new Color(0.95f,0.85f,0.38f));tip.transform.SetParent(rod.transform,true);
                     var rb=tip.AddComponent<Rigidbody2D>();rb.bodyType=RigidbodyType2D.Kinematic;rb.gravityScale=0.25f;rb.collisionDetectionMode=CollisionDetectionMode2D.Continuous;
-                    var collider=tip.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=1.1f;tip.AddComponent<TipContact>().owner=rod;tip.GetComponent<SpriteRenderer>().sortingOrder=5;
+                    var collider=tip.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=1.1f;tip.GetComponent<SpriteRenderer>().sortingOrder=5;
                     PlayerPrefabBuilder.BakeSprites(tip,"LineTip");
                     Directory.CreateDirectory("Assets/FishingCombat/Art");
                     var material=AssetDatabase.LoadAssetAtPath<Material>(materialPath);

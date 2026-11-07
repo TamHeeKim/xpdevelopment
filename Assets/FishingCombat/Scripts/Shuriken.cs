@@ -3,6 +3,9 @@ namespace FishingPrototype
 {
     public sealed class Shuriken : MonoBehaviour
     {
+        [Header("수리검 수치")]
+        [Min(0)] public float attack = 12f;
+        [Min(0.1f)] public float flySpeed = 7f;
         [Header("회전")]
         public float spinSpeed = 720f;
         HookableBody body;
@@ -32,7 +35,7 @@ namespace FishingPrototype
             var player = FindFirstObjectByType<PlayerController>();
             if (player) Physics2D.IgnoreCollision(hitbox, player.GetComponent<Collider2D>(), true);
         }
-        void Start() { expires = Time.time + 8f; body.Body.angularVelocity = spinSpeed; }
+        void Start() { body.Body.linearDamping = 0f; expires = Time.time + 8f; body.Body.angularVelocity = spinSpeed; }
         void Update()
         {
             if (body.IsHooked) { Reflect(); expires = Time.time + 8f; }
@@ -43,8 +46,8 @@ namespace FishingPrototype
             if (!body || body.IsHooked) return;
             var player = hit.collider.GetComponent<PlayerHealth>();
             var enemy = hit.collider.GetComponent<HookableBody>();
-            if (!returned && player) { player.ReceiveDamage(12f, new Vector2(Mathf.Sign(body.Body.linearVelocity.x) * 3f, 1f)); Destroy(gameObject); }
-            else if (returned && enemy && enemy.kind == HookableBody.BodyKind.Enemy) { enemy.ReceiveDamage(30f); Destroy(gameObject); }
+            if (!returned && player) { player.ReceiveDamage(attack, new Vector2(Mathf.Sign(body.Body.linearVelocity.x) * 3f, 1f)); Destroy(gameObject); }
+            else if (returned && enemy && enemy.kind == HookableBody.BodyKind.Enemy) { enemy.ReceiveDamage(attack * 1.5f); Destroy(gameObject); }
             else if (!enemy && !player) Destroy(gameObject);
         }
     }

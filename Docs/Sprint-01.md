@@ -36,3 +36,11 @@
 - SO·Play 자동 갱신(2026-11-02): 플레이어·적 시트의 모든 행을 Assets/Externals/Data/Stats의 CombatStatDefinition SO로 가져오고, Assets/Externals/Scenes/Integration.unity의 적에 SO 할당 완료. Play 시작 및 완료 후 5초마다 시트 조회, 변경된 값만 영구 SO 에셋에 저장·적에 반영. 최대 체력 갱신은 기존 피해량을 보존하며 F키 피해는 인스턴스에서만 관리. 실제 원본 자동 조회 2회, 로컬 CSV 변경 입력에 대한 SO 갱신/참조 GUID 유지/60→80 최대 체력 변경 시 피해 10 보존(70/80), 변경 없음 건너뛰기, 잘못된 값 거부, F키·체력 0 하한 검사 통과. 테스트 데이터는 로컬에서 원래 SO 값으로 복구했으며 원본 시트 쓰기 없음. Unity 컴파일 및 diff 검사 통과.
 
 - 커밋 규칙 문서화(2026-11-03): Docs/CommitConvention.md 추가 및 AGENTS.md·TeamWorkflow.md 연결. 기존 commit-msg/pre-push 훅 활성화와 문서 형식 확인 완료.
+
+## 플레이어 기획 갱신 (2026-11-07)
+
+- feature/player: 0.5초 직선 공격(전체 폭 attackWidth, 적당 1회 attack 피해), 원형 타겟팅·0.3+catchHold 포획, 거리 catchRange/2 유지, E 내려찍기(120%/110%), Q 부채꼴 보정 투척 구현.
+- 수리검 flySpeed*2·attack*1.5, 포획 중 물리 충돌 피해 중복 방지, 사망 해제, 오브젝트 비파괴 유지. 저장 키 F로 이동하고 CSV 안내 갱신.
+- 기존 SO에 attackWidth/catchRange/catchHold 선택 열 파싱 추가. 원본 시트 쓰기 없음. 기본값 폭 0.6/포획 거리 7.5/추가 홀드 0. 일반/무거운 적은 현재 같은 사천당가 SO를 참조하며 종류별 SO 연결 가능.
+- 검증: 별도 Unity 6000.3.11f1에서 기본공격 유지·중복 방지, 타겟 우선순위·범위, 추가 홀드·취소, 포획 거리, 바닥/적/오브젝트 내려찍기·사망 해제, 투척 각도·동각 거리, 시트 이전/확장 헤더 검사 통과. 입력 주입 Play에서 좌클릭·E·Q·수리검 속도/명중 피해 확인. Windows64 빌드 통과. 검증 에디터의 기존 SearchDatabase 예외는 게임 로직 밖에서 발생.
+- 미검증: 장시간 직접 조작감, 원본 시트 새 열 실제 편집. 수치/연출 속도 미정 항목은 Inspector 기본값으로 적용. 회피/스킬 추가 없음.

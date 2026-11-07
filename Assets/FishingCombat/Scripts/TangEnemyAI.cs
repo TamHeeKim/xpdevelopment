@@ -43,7 +43,7 @@ namespace FishingPrototype
                 if (Time.time >= until)
                 {
                     var projectile = Instantiate(shurikenPrefab, body.Body.position + Vector2.right * direction, Quaternion.identity);
-                    projectile.GetComponent<Rigidbody2D>().linearVelocity = Vector2.right * direction * 7f;
+                    projectile.GetComponent<Rigidbody2D>().linearVelocity = Vector2.right * direction * projectile.flySpeed;
                     state = 0; cooldown = Time.time + 1.5f;
                     GetComponent<SpriteRenderer>().color = body.baseColor;
                 }

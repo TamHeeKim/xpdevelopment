@@ -12,23 +12,23 @@ hud.tip,한 번의 포획으로 전세를 뒤집으세요,
 hud.objective,현재 목표,
 hud.ready,전투 준비,
 hud.hooked_suffix, · 포획,
-hud.capture_heavy,무거운 적 포획 중 · 좌클릭 유지,
-hud.held_controls,우클릭: 당기기  /  좌클릭 떼기: 투척,
+hud.capture_heavy,포획 중 · 좌클릭 유지,
+hud.held_controls,E: 내려찍기  /  Q: 커서 방향 투척,
 hud.attack_controls,좌클릭: 공격  /  유지: 포획,
 ui.close,닫기,
 ui.open,열기,
 hud.help_title,낚싯대 전투 · 조작 안내,
 hud.help_body,"A / D   이동       W   점프
 좌클릭   공격 · 유지하면 포획
-잡은 뒤 아래로 빠르게 휘두르기   내려찍기
-좌클릭 떼기   투척       우클릭 유지   당기기
-E   저장·회복
+E   내려찍기       Q   커서 방향 투척
+포획 완료 후 좌클릭을 떼어도 유지
+F   저장·회복
 F9   저장 불러오기       R   재시작
 수리검은 되던지고, 호리병은 독가스에 담그세요",
 status.hooked_suffix,  [포획 중],
-objective.start,시작 지점·첫 전투 다음 휴식 구간에서 E: 저장·회복  |  F9: 불러오기,
+objective.start,시작 지점·첫 전투 다음 휴식 구간에서 F: 저장·회복  |  F9: 불러오기,
 objective.saved,저장·회복 완료  |  오른쪽으로 이동하세요,
-objective.first_clear,첫 번째 전투 완료  |  오른쪽 휴식 구간에서 E: 저장·회복,
+objective.first_clear,첫 번째 전투 완료  |  오른쪽 휴식 구간에서 F: 저장·회복,
 objective.complete,구간 완료  |  R: 저장 지점부터 다시 시작,
 objective.retry,재도전  |  오른쪽으로 이동하세요,
 wave.first,첫 번째 전투,

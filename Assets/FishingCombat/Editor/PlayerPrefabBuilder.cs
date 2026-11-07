@@ -47,6 +47,7 @@ namespace FishingPrototype.Editor
                 EditorSceneManager.SaveScene(scene);
             }
             CombatSceneBuilder.UpgradePlayer();
+            PlayerCombatSetup.UpgradePrefabs();
             AssetDatabase.SaveAssets();
             Check();
         }

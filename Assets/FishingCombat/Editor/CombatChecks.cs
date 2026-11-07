@@ -39,31 +39,6 @@ namespace FishingPrototype.Editor
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
-        private static void CheckHeldTip()
-        {
-            var player = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("Player"));
-            var prop = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("Rock"));
-            try
-            {
-                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-                var rod = player.GetComponentInChildren<FishingRodController>();
-                typeof(FishingRodController).GetMethod("Start", flags).Invoke(rod, null);
-                var target = prop.GetComponent<HookableBody>();
-                typeof(HookableBody).GetMethod("Awake", flags).Invoke(target, null);
-                typeof(FishingRodController).GetMethod("Hook", flags).Invoke(rod, new object[] { target });
-                prop.transform.position = new Vector3(3f, 2f, 0f);
-                var lateUpdate = typeof(FishingRodController).GetMethod("LateUpdate", flags);
-                lateUpdate.Invoke(rod, null);
-                var tip = (SpriteRenderer)typeof(FishingRodController).GetField("tipVisual", flags).GetValue(rod);
-                var line = (LineRenderer)typeof(FishingRodController).GetField("line", flags).GetValue(rod);
-                if (tip.enabled || Vector3.Distance(line.GetPosition(line.positionCount - 1), prop.transform.position) > 0.001f)
-                    throw new Exception("포획 중 찌는 숨기고 줄 끝은 물체 표시 위치에 연결해야 한다.");
-                rod.Interrupt(); lateUpdate.Invoke(rod, null);
-                if (!tip.enabled) throw new Exception("포획 해제 후 찌 표시를 복원해야 한다.");
-            }
-            finally { UnityEngine.Object.DestroyImmediate(prop); UnityEngine.Object.DestroyImmediate(player); }
-        }
-
         public static void Run()
         {
             var go = new GameObject("Test_Combatcheck");
@@ -124,50 +99,9 @@ namespace FishingPrototype.Editor
             if (Physics2D.GetIgnoreCollision(projectileCollider, go.GetComponent<Collider2D>())) throw new Exception("Returned shuriken must hit enemies");
             UnityEngine.Object.DestroyImmediate(projectile);
             CheckSpawnPoints();
-            CheckHeldTip();
+            PlayerCombatChecks.Run();
             UnityEngine.Object.DestroyImmediate(go);
-            Vector2 velocity = new Vector2(10f, 0f);
-            Vector2 redirected = CombatAimAssist.RedirectThrow(velocity, new Vector2(4f, 2f), 55f);
-            if (Mathf.Abs(redirected.magnitude - velocity.magnitude) > 0.001f || redirected.y <= 0f)
-                throw new Exception("Assist must change direction without changing speed");
-            if (CombatAimAssist.RedirectThrow(velocity, Vector2.left, 55f) != velocity)
-                throw new Exception("Target behind throw must not reverse it");
-            if (CombatAimAssist.RedirectThrow(Vector2.right, Vector2.up, 55f) != Vector2.right)
-                throw new Exception("Slow release must remain unchanged");
-            if (CombatAimAssist.RedirectThrow(velocity, Vector2.zero, 55f) != velocity)
-                throw new Exception("Overlapping target must not zero throw velocity");
-            var rodObject = new GameObject("Test_Attackrestartcheck");
-            var rod = rodObject.AddComponent<FishingRodController>();
             var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-            var stateField = typeof(FishingRodController).GetField("state", flags);
-            var startField = typeof(FishingRodController).GetField("whipStarted", flags);
-            var startMethod = typeof(FishingRodController).GetMethod("StartWhip", flags);
-            foreach (string stateName in new[] { "Whipping", "Returning", "Hooked" })
-            {
-                stateField.SetValue(rod, Enum.Parse(stateField.FieldType, stateName)); startField.SetValue(rod, -123f);
-                for(int i=0;i<10;i++) startMethod.Invoke(rod,null);
-                if ((float)startField.GetValue(rod) != -123f || stateField.GetValue(rod).ToString() != stateName)
-                    throw new Exception("Repeated clicks must not restart an active action");
-            }
-            rod.rodVisual = rodObject.transform;
-            var tipObject = new GameObject("Test_Recoverychecktip");
-            var tip = tipObject.AddComponent<Rigidbody2D>();
-            typeof(FishingRodController).GetField("tipBody", flags).SetValue(rod, tip);
-            var bufferField = typeof(FishingRodController).GetField("bufferedAttackUntil", flags);
-            var returnMethod = typeof(FishingRodController).GetMethod("UpdateReturn", flags);
-            stateField.SetValue(rod, Enum.Parse(stateField.FieldType, "Returning"));
-            tip.position = Vector2.right * 7f;
-            bufferField.SetValue(rod, Time.time - 1f);
-            returnMethod.Invoke(rod, null);
-            if (stateField.GetValue(rod).ToString() != "Returning")
-                throw new Exception("Expired input must not start another attack");
-            bufferField.SetValue(rod, Time.time + 0.25f);
-            returnMethod.Invoke(rod, null);
-            if (stateField.GetValue(rod).ToString() != "Whipping" ||
-                !float.IsNegativeInfinity((float)bufferField.GetValue(rod)))
-                throw new Exception("Queued attack must skip recovery and consume input once");
-            UnityEngine.Object.DestroyImmediate(tipObject);
-            UnityEngine.Object.DestroyImmediate(rodObject);
             var playerObject = new GameObject("Test_포획충돌검사플레이어");
             playerObject.AddComponent<PlayerController>();
             var playerCollider = playerObject.AddComponent<BoxCollider2D>();

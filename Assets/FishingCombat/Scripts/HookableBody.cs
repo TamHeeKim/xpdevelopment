@@ -1,3 +1,4 @@
+using FishingPrototype.Integration;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -19,6 +20,12 @@ namespace FishingPrototype
         public Color baseColor = Color.white;
         [UnityEngine.Serialization.FormerlySerializedAs("RespawnOnDeath")]
         public bool respawnOnDeath = true;
+        [Header("포획 설정")]
+        public CombatStatDefinition statDefinition;
+        [Min(0)] public float catchHold;
+        public CircleCollider2D targetingCollider;
+        public float CatchHold => statDefinition ? statDefinition.Values.catchHold : catchHold;
+        public float Health => health;
         public Rigidbody2D Body { get; private set; }
         public bool IsHooked { get; private set; }
         [UnityEngine.Serialization.FormerlySerializedAs("ThrowDamageDuration")]
@@ -95,6 +102,8 @@ namespace FishingPrototype
             if (health <= 0f && !respawning) StartCoroutine(Respawn());
         }
 
+        public void ClearThrow() { thrownUntil = float.NegativeInfinity; impactTimes.Clear(); }
+
         private void FixedUpdate()
         {
             if (kind != BodyKind.Prop || IsHooked || GetComponent<Shuriken>() || Body.position.y >= -12f) return;
@@ -109,9 +118,10 @@ namespace FishingPrototype
         private void OnCollisionEnter2D(Collision2D collision)
         {
             float speed = collision.relativeVelocity.magnitude;
-            if (speed < 4.5f || (!IsHooked && !IsThrown) || respawning) return;
+            if (speed < 4.5f || IsHooked || !IsThrown || respawning || GetComponent<Shuriken>()) return;
             if (collision.collider.GetComponent<PlayerController>()) return;
             HookableBody partner = collision.collider.GetComponent<HookableBody>();
+            if (partner && (partner.IsHooked || partner.GetComponent<Shuriken>())) return;
             int key = partner ? partner.GetInstanceID() : collision.collider.GetInstanceID();
             if (impactTimes.TryGetValue(key, out float last) && Time.time - last < 0.1f) return;
             impactTimes[key] = Time.time;
