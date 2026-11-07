@@ -60,6 +60,7 @@ namespace FishingPrototype
                 throw new System.InvalidOperationException("플레이어 전투 프리팹 연결을 확인하세요.");
             rodPosition = rodVisual.localPosition; rodScale = rodVisual.localScale; rodAngles = rodVisual.localEulerAngles;
             tipVisual = tipBody.GetComponent<SpriteRenderer>();
+            if (strikeLine) strikeLine.enabled = false;
             tipCollider.enabled = false;
             tipBody.bodyType = RigidbodyType2D.Kinematic;
             tipBody.simulated = false;
@@ -357,13 +358,7 @@ namespace FishingPrototype
                 float t = i / (line.positionCount - 1f), u = 1f - t;
                 line.SetPosition(i, u * u * start + 2f * u * t * control + t * t * end);
             }
-            strikeLine.enabled = Time.time < attackUntil;
-            if (strikeLine.enabled)
-            {
-                strikeLine.positionCount = 2; strikeLine.startWidth = 0.035f; strikeLine.endWidth = 0.06f;
-                strikeLine.startColor = strikeLine.endColor = new Color(0.75f, 0.9f, 1f, 0.18f);
-                strikeLine.SetPosition(0, attackStart); strikeLine.SetPosition(1, attackEnd);
-            }
+
         }
     }
 }
