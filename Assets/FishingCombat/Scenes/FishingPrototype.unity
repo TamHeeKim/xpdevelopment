@@ -167,6 +167,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2445962887221473775, guid: 1c308ba43a378d941b22500986bf9d56, type: 3}
+      propertyPath: m_Interpolate
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5857000700298118377, guid: 1c308ba43a378d941b22500986bf9d56, type: 3}
       propertyPath: m_Name
       value: Player_Fisher
@@ -185,7 +189,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2032959187e4deb47b4055d2ef649366, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.FishingRodController
 --- !u!4 &371939260 stripped
 Transform:
@@ -201,7 +205,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c3dacd3b962872d4498d7bdee081fd04, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.PlayerController
 --- !u!114 &371939262 stripped
 MonoBehaviour:
@@ -212,7 +216,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a55ba61d121c41d88d5af6712f35db63, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.PlayerHealth
 --- !u!1001 &787670862
 PrefabInstance:
@@ -264,51 +268,51 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: rod
-      value:
+      value: 
       objectReference: {fileID: 371939259}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: player
-      value:
+      value: 
       objectReference: {fileID: 371939261}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: combatGate
-      value:
+      value: 
       objectReference: {fileID: 1340607054}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: finishGate
-      value:
+      value: 
       objectReference: {fileID: 1340607053}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: firstTrigger
-      value:
+      value: 
       objectReference: {fileID: 1340607050}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: secondTrigger
-      value:
+      value: 
       objectReference: {fileID: 1340607049}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: firstLeftSpawn
-      value:
+      value: 
       objectReference: {fileID: 1340607048}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: firstRightSpawn
-      value:
+      value: 
       objectReference: {fileID: 1340607047}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: secondLeftSpawn
-      value:
+      value: 
       objectReference: {fileID: 1340607046}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: startCheckpoint
-      value:
+      value: 
       objectReference: {fileID: 1340607052}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: middleCheckpoint
-      value:
+      value: 
       objectReference: {fileID: 1340607051}
     - target: {fileID: 4192039188970741414, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: secondRightSpawn
-      value:
+      value: 
       objectReference: {fileID: 1340607045}
     - target: {fileID: 8521298946493338182, guid: 96588e3bcdbc4c647b3a30d5dff0fb3d, type: 3}
       propertyPath: m_Name
@@ -328,7 +332,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 51f17996a33b4bea8777207d3b1f5ed9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.StageDirector
 --- !u!1001 &1340607044
 PrefabInstance:
@@ -491,7 +495,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6274627385097312296, guid: dc9ccee772d4fb7459582e865dd04b8c, type: 3}
       propertyPath: target
-      value:
+      value: 
       objectReference: {fileID: 371939260}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -508,19 +512,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1248704438158577921, guid: 4b208810b52a81b44b8c3dd379e31817, type: 3}
       propertyPath: rod
-      value:
+      value: 
       objectReference: {fileID: 371939259}
     - target: {fileID: 1248704438158577921, guid: 4b208810b52a81b44b8c3dd379e31817, type: 3}
       propertyPath: stage
-      value:
+      value: 
       objectReference: {fileID: 787670863}
     - target: {fileID: 1248704438158577921, guid: 4b208810b52a81b44b8c3dd379e31817, type: 3}
       propertyPath: health
-      value:
+      value: 
       objectReference: {fileID: 371939262}
     - target: {fileID: 1248704438158577921, guid: 4b208810b52a81b44b8c3dd379e31817, type: 3}
       propertyPath: player
-      value:
+      value: 
       objectReference: {fileID: 371939261}
     - target: {fileID: 2228441535221680103, guid: 4b208810b52a81b44b8c3dd379e31817, type: 3}
       propertyPath: m_Name
