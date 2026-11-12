@@ -36,12 +36,20 @@ namespace FishingPrototype
         Vector2 sprayDirection;
         Vector3 visualPosition;
         Quaternion visualRotation;
-        Vector2 AttackOrigin => attackPoint ? (Vector2)attackPoint.position : body.Body.position + Vector2.right * direction;
+        SpriteRenderer[] facingParts;
+        Vector3[] partPositions;
+        bool[] partFlips;
+        Vector3 AttackVisualPosition => new Vector3(visualPosition.x * direction, visualPosition.y, visualPosition.z);
+        Vector2 AttackOrigin => attackPoint ? body.Body.position + (Vector2)(attackPoint.position - transform.position) : body.Body.position + Vector2.right * direction;
 
         void Start()
         {
             body = GetComponent<HookableBody>(); visual = GetComponent<SpriteRenderer>();
             if (attackVisual) { visualPosition = attackVisual.localPosition; visualRotation = attackVisual.localRotation; }
+            facingParts = GetComponentsInChildren<SpriteRenderer>();
+            partPositions = new Vector3[facingParts.Length]; partFlips = new bool[facingParts.Length];
+            for (int i = 0; i < facingParts.Length; i++)
+            { partPositions[i] = facingParts[i].transform.localPosition; partFlips[i] = facingParts[i].flipX; }
             if (!player) player = FindFirstObjectByType<PlayerController>();
         }
         void FixedUpdate()
@@ -58,12 +66,13 @@ namespace FishingPrototype
             }
             if (state == ActionState.Windup)
             {
+                FacePlayer();
                 Move(0);
                 visual.color = Color.Lerp(body.baseColor, Color.yellow, 0.55f + Mathf.Sin(Time.time * 20f) * 0.25f);
                 if (attackVisual)
                 {
                     float progress = attackWindupTime <= 0 ? 1 : Mathf.Clamp01(1f - (until - Time.time) / attackWindupTime);
-                    attackVisual.localPosition = visualPosition + Vector3.up * Mathf.Sin(progress * Mathf.PI * 0.5f) * 0.2f;
+                    attackVisual.localPosition = AttackVisualPosition + Vector3.up * Mathf.Sin(progress * Mathf.PI * 0.5f) * 0.2f;
                     attackVisual.localRotation = visualRotation * Quaternion.Euler(0, 0, -50f * direction * progress);
                 }
                 if (Time.time >= until) Fire();
@@ -81,19 +90,31 @@ namespace FishingPrototype
                 Move(0);
                 if (Time.time < until) return;
             }
-            if (Mathf.Abs(delta.x) > 0.01f) direction = Mathf.Sign(delta.x);
-            if (attackPoint)
-            {
-                Vector3 point = attackPoint.localPosition;
-                point.x = Mathf.Abs(point.x) * direction; attackPoint.localPosition = point;
-            }
+            FacePlayer();
             float movement = enemyType == EnemyType.Poison ? (distance > attackRange ? direction : 0f)
                 : distance < minKeepDistance ? -direction : distance > Mathf.Max(minKeepDistance, maxKeepDistance) ? direction : 0f;
             if (movement != 0f) { state = ActionState.Moving; Move(movement * (body.statDefinition ? body.statDefinition.Values.moveSpeed : moveSpeed)); return; }
             Move(0); state = ActionState.Windup; until = Time.time + attackWindupTime;
         }
+        void FacePlayer()
+        {
+            float delta = player.Body.position.x - body.Body.position.x;
+            if (Mathf.Abs(delta) > 0.01f) direction = Mathf.Sign(delta);
+            if (attackPoint)
+            {
+                Vector3 point = attackPoint.localPosition;
+                point.x = Mathf.Abs(point.x) * direction; attackPoint.localPosition = point;
+            }
+            for (int i = 0; i < facingParts.Length; i++)
+            {
+                var part = facingParts[i]; part.flipX = partFlips[i] ^ (direction < 0f);
+                if (part.transform.parent == transform)
+                    part.transform.localPosition = new Vector3(partPositions[i].x * direction, partPositions[i].y, partPositions[i].z);
+            }
+        }
         void Fire()
         {
+            FacePlayer();
             visual.color = body.baseColor;
             ResetPose();
             Vector2 aim = (player.Body.position - AttackOrigin).normalized;
@@ -117,7 +138,7 @@ namespace FishingPrototype
         void EndSpray() { if (spray) Destroy(spray.gameObject); spray = null; }
         void ResetPose()
         {
-            if (attackVisual) { attackVisual.localPosition = visualPosition; attackVisual.localRotation = visualRotation; }
+            if (attackVisual) { attackVisual.localPosition = AttackVisualPosition; attackVisual.localRotation = visualRotation; }
         }
         void CancelAttack()
         {

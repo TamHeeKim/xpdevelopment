@@ -7,7 +7,7 @@ namespace FishingPrototype.Editor
     public static class EnemyCombatChecks
     {
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-        static void Call(object value, string name) => value.GetType().GetMethod(name, flags).Invoke(value, null);
+        static void Call(object value, string name, params object[] args) => value.GetType().GetMethod(name, flags).Invoke(value, args);
         static void Set(object value, string name, object data) => value.GetType().GetField(name, flags).SetValue(value, data);
         static void Check(bool value, string message) { if (!value) throw new Exception(message); }
         static HookableBody Actor(string name, Transform root, Vector2 position)
@@ -34,7 +34,11 @@ namespace FishingPrototype.Editor
                 Check(gas.State == TangEnemyAI.ActionState.Moving && gasBody.Body.linearVelocity.x < 0, "독가스병이 공격 범위까지 접근해야 한다.");
                 gasBody.Body.position = new Vector2(1004, 1000); Call(gas, "FixedUpdate");
                 Check(gas.State == TangEnemyAI.ActionState.Windup && gasBody.Body.linearVelocity.x == 0, "독가스 공격 경계에서 즉시 준비해야 한다.");
+                player.Body.position = new Vector2(1008, 1000); Call(gas, "FixedUpdate");
+                Check(gas.attackPoint.localPosition.x > 0 && gas.transform.Find("Sprite_눈").localPosition.x > 0, "준비 중 반대편으로 이동하면 예고 지점과 외형이 함께 돌아야 한다.");
+                player.Body.position = new Vector2(1000, 1000);
                 Set(gas, "until", Time.time - 1); Call(gas, "FixedUpdate");
+                Check(gas.attackPoint.localPosition.x < 0 && gas.transform.Find("Sprite_눈").localPosition.x < 0, "독가스 분사 직전에도 지점과 외형을 다시 맞춰야 한다.");
                 var cloud = (PoisonCloud)typeof(TangEnemyAI).GetField("spray", flags).GetValue(gas);
                 Check(cloud && gas.State == TangEnemyAI.ActionState.Spraying, "준비 후 분사를 시작해야 한다.");
                 Check(Mathf.Abs(cloud.area.x - gas.gasRange) < 0.01f, "분사 시작부터 전체 gasRange 판정이 있어야 한다.");
@@ -67,9 +71,14 @@ namespace FishingPrototype.Editor
                     Set(ranged, "state", TangEnemyAI.ActionState.Moving); rangedBody.Body.position = new Vector2(1000 + boundary, 1000);
                     Call(ranged, "FixedUpdate"); Check(ranged.State == TangEnemyAI.ActionState.Windup, "거리 유지의 양쪽 경계를 포함해야 한다.");
                 }
+                player.Body.position = new Vector2(1010, 1000);
                 Set(ranged, "until", Time.time - 1); Call(ranged, "FixedUpdate");
                 var shot = UnityEngine.Object.FindFirstObjectByType<Shuriken>();
                 Check(shot && ranged.State == TangEnemyAI.ActionState.Recovery, "수리검 발사 직후 대기해야 한다.");
+                Check(ranged.attackPoint.localPosition.x > 0 && ranged.transform.Find("Sprite_눈").localPosition.x > 0
+                    && shot.transform.position.x > rangedBody.Body.position.x && shot.GetComponent<Rigidbody2D>().linearVelocity.x > 0,
+                    "수리검 발사 순간 바뀐 플레이어 방향으로 외형·발사 지점·속도를 맞춰야 한다.");
+                player.Body.position = new Vector2(1000, 1000);
                 shot.transform.SetParent(root.transform);
                 Check(shot.GetComponent<Rigidbody2D>().gravityScale == 0 && Mathf.Abs(shot.GetComponent<Rigidbody2D>().linearVelocity.magnitude - shot.flySpeed) < 0.01f, "수리검은 무중력 일정 속도로 발사해야 한다.");
                 UnityEngine.Object.DestroyImmediate(shot.gameObject);
@@ -95,8 +104,16 @@ namespace FishingPrototype.Editor
                 var poison = player.GetComponent<PoisonStatus>(); poison.until = 0;
                 poison.Apply(3, 7, 0.25f, 0.3f);
                 Check(poison.status == PoisonStatus.PlayerStatus.poisoning && Mathf.Abs(poison.SpeedMultiplier - 0.7f) < 0.001f, "중독 상태와 감속 비율을 적용해야 한다.");
-                float hp = health.Health; Set(poison, "nextTick", Time.time - 1); Call(poison, "Update");
-                Check(health.Health == hp - 7, "중독 피해는 설정된 틱 피해를 적용해야 한다.");
+                float hp = health.Health; Set(poison, "nextTick", Time.time - 0.5f); Call(poison, "Update");
+                Check(health.Health == hp - 21, "밀린 중독 3틱을 누락 없이 합산해야 한다.");
+                Call(poison, "Update"); Check(health.Health == hp - 21, "이미 처리한 틱을 중복 적용하면 안 된다.");
+                poison.until = 0; poison.Apply(0.875f, 4, 0.25f, 0.3f); hp = health.Health;
+                Call(poison, "Tick", Time.time + 2f);
+                Check(health.Health == hp - 12, "만료를 넘긴 프레임에도 만료 전 3틱만 적용해야 한다.");
+                Call(poison, "Tick", Time.time + 3f); Check(health.Health == hp - 12, "만료 뒤 추가 피해가 있으면 안 된다.");
+                poison.until = 0; poison.Apply(3, 2, 0.25f, 0.3f); hp = health.Health;
+                Set(poison, "nextTick", Time.time - 0.25f); poison.Apply(3, 5, 0.25f, 0.3f);
+                Check(health.Health == hp - 4, "접촉 갱신 전에 밀린 틱은 이전 피해값으로 정산해야 한다.");
                 poison.until = Time.time - 1; Check(poison.status == PoisonStatus.PlayerStatus.normal && poison.SpeedMultiplier == 1, "만료 후 정상 속도로 돌아와야 한다.");
                 var gasObject = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("EnemyPoison"), root.transform);
                 gasObject.transform.position = player.transform.position;
