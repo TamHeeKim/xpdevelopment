@@ -57,3 +57,10 @@
 - 에디터 생성/검사/씬 열기 경로, 빌드 씬 목록, 템플릿 기본 씬, 안내 문서 경로 갱신. 효과음 생성 시 Sounds 폴더 준비 추가.
 - 정적 검증: 이동 전후 GUID/바이너리 보존, GUID 중복 없음, 에디터 참조 경로 존재, 이전 경로 잔존 없음, git diff 검사 통과.
 - 실행 검증 한계: 기존 검증 캐시 및 새 임시 Unity 프로젝트 모두 Initial Refresh에서 진행되지 않아 검증 프로세스만 종료. 이번 변경의 Play/Windows 빌드는 미검증이며 사용자 Unity 에디터는 종료하지 않음.
+
+
+## 설정 폴더 분리 (2026-11-13)
+
+- 사용자 요청으로 Assets/Externals/Settings를 Assets/Settings로 이동. 파일 및 GUID 보존 검증.
+- TutorialInfo·Externals/Docs·Linebreaker·OriginalFishingPoC 삭제는 자동 승인 검토가 재귀 삭제를 blocked by policy로 거부하여 미실행. 삭제 대상 GUID를 유지 에셋에서 참조하지 않는 것은 확인.
+- 이번 작업의 Unity 실행·빌드 검증은 수행하지 않음.

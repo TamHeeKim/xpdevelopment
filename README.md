@@ -23,14 +23,13 @@ Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 �
 
 ## 에셋 폴더
 
-공유 에셋은 `Assets/Externals` 아래에서 종류별로 관리합니다.
+게임 에셋은 `Assets/Externals` 아래에서 종류별로 관리하며, URP 렌더링 설정은 `Assets/Settings`에 둡니다.
 
 - `Scripts` / `Scripts/Editor`: 런타임 코드 / 에디터 도구·검사
 - `Scenes`, `Prefabs`: 편집 씬과 프리팹
 - `Textures/Combat`, `Materials`, `Sounds`: 전투 이미지·머티리얼·효과음
 - `Data/Stats`: 스프레드시트에서 가져온 스탯 SO
 - `Resources`: 이름으로 로드하는 CSV와 UI 폰트
-- `Settings`: URP 설정
 - `Models`, `Shaders`: 모델·셰이더
 - `Docs`: 전투 구현 문서
 - `TutorialInfo`: Unity 기본 안내 에셋
