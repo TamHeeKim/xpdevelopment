@@ -37,9 +37,14 @@ namespace FishingPrototype.Editor
                 Set(gas, "until", Time.time - 1); Call(gas, "FixedUpdate");
                 var cloud = (PoisonCloud)typeof(TangEnemyAI).GetField("spray", flags).GetValue(gas);
                 Check(cloud && gas.State == TangEnemyAI.ActionState.Spraying, "준비 후 분사를 시작해야 한다.");
+                Check(Mathf.Abs(cloud.area.x - gas.gasRange) < 0.01f, "분사 시작부터 전체 gasRange 판정이 있어야 한다.");
                 cloud.transform.SetParent(root.transform); Call(cloud, "Start");
+                Check(cloud.transform.childCount > 0, "독가스 흐름을 표시할 연기 파츠가 있어야 한다.");
+                Vector3 gasPosition = cloud.transform.position, gasScale = cloud.transform.localScale;
+                Call(cloud, "Update");
+                Check(cloud.transform.position == gasPosition && cloud.transform.localScale == gasScale, "연기 연출이 피해 범위를 움직이거나 늘리면 안 된다.");
                 Set(gas, "until", Time.time + gas.sprayDuration * 0.5f); Call(gas, "FixedUpdate");
-                Check(Mathf.Abs(cloud.area.x - gas.gasRange * 0.5f) < 0.01f, "분사는 설정된 최대 거리 안에서 자라야 한다.");
+                Check(Mathf.Abs(cloud.area.x - gas.gasRange) < 0.01f, "분사 중에도 전체 범위를 유지해야 한다.");
                 UnityEngine.Object.DestroyImmediate(cloud.gameObject);
                 Set(gas, "until", Time.time - 1); Call(gas, "FixedUpdate");
                 Check(gas.State == TangEnemyAI.ActionState.Recovery, "분사 후 대기해야 한다.");

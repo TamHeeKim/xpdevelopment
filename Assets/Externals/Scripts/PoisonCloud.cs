@@ -21,6 +21,7 @@ namespace FishingPrototype
         private readonly System.Collections.Generic.HashSet<PoisonStatus> touching = new System.Collections.Generic.HashSet<PoisonStatus>();
         private readonly System.Collections.Generic.HashSet<PoisonStatus> previous = new System.Collections.Generic.HashSet<PoisonStatus>();
         private Vector3[] smokePositions, smokeScales;
+        private SpriteRenderer[] smokeRenderers;
         public void SetSprayShape(Vector2 origin, Vector2 direction, float length)
         {
             length = Mathf.Max(0.01f, length);
@@ -34,12 +35,23 @@ namespace FishingPrototype
             if (!prefab) throw new System.InvalidOperationException("독가스 프리팹이 연결되지 않았습니다.");
             return Instantiate(prefab, position, Quaternion.identity);
         }
-        void Update() { if (damagesEnemies) AnimateSmoke(); }
+        void Update() { if (smokePositions != null) AnimateSmoke(); }
         void AnimateSmoke()
         {
             for (int i = 0; i < transform.childCount; i++)
             {
                 var puff = transform.GetChild(i);
+                if (!damagesEnemies)
+                {
+                    float flow = Mathf.Repeat(Time.time * 0.6f + i / (float)transform.childCount, 1f);
+                    puff.localPosition = new Vector3(Mathf.Lerp(-0.35f, 0.35f, flow), smokePositions[i].y + Mathf.Sin(flow * Mathf.PI * 2f) * 0.03f, 0f);
+                    if (smokeRenderers[i])
+                    {
+                        Color color = smokeRenderers[i].color;
+                        color.a = Mathf.Sin(flow * Mathf.PI) * 0.55f; smokeRenderers[i].color = color;
+                    }
+                    continue;
+                }
                 float phase = Time.time * 1.8f + i * 1.7f;
                 puff.localPosition = smokePositions[i] + new Vector3(Mathf.Sin(phase) * 0.035f, Mathf.Cos(phase) * 0.07f, 0f);
                 puff.localScale = smokeScales[i] * (1f + Mathf.Sin(phase) * 0.1f);
@@ -50,8 +62,9 @@ namespace FishingPrototype
             expires = Time.time + duration;
             smokePositions = new Vector3[transform.childCount];
             smokeScales = new Vector3[transform.childCount];
+            smokeRenderers = new SpriteRenderer[transform.childCount];
             for (int i = 0; i < transform.childCount; i++)
-            { smokePositions[i] = transform.GetChild(i).localPosition; smokeScales[i] = transform.GetChild(i).localScale; }
+            { smokePositions[i] = transform.GetChild(i).localPosition; smokeScales[i] = transform.GetChild(i).localScale; smokeRenderers[i] = transform.GetChild(i).GetComponent<SpriteRenderer>(); }
         }
         void FixedUpdate()
         {

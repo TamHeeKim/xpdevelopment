@@ -72,7 +72,7 @@ namespace FishingPrototype
             if (state == ActionState.Spraying)
             {
                 Move(0);
-                if (spray) spray.SetSprayShape(AttackOrigin, sprayDirection, gasRange * Mathf.Clamp01(1f - (until - Time.time) / Mathf.Max(0.01f, sprayDuration)));
+                if (spray) spray.SetSprayShape(AttackOrigin, sprayDirection, gasRange);
                 if (Time.time >= until) { EndSpray(); EnterRecovery(); }
                 return;
             }
@@ -102,7 +102,7 @@ namespace FishingPrototype
             {
                 spray = PoisonCloud.Spawn(poisonCloudPrefab, AttackOrigin);
                 spray.duration = sprayDuration; sprayDirection = aim;
-                spray.SetSprayShape(AttackOrigin, aim, 0.01f);
+                spray.SetSprayShape(AttackOrigin, aim, gasRange);
                 state = ActionState.Spraying; until = Time.time + sprayDuration;
             }
             else

@@ -68,11 +68,6 @@ namespace FishingPrototype.Editor
 
         static void BuildEffects()
         {
-            if (!Prefab("EnemyPoison"))
-            {
-                var go = Visual("Effect_EnemyPoison", Vector2.zero, new Vector2(3f, 2f), new Color(0.3f, 0.85f, 0.2f, 0.35f));
-                go.AddComponent<PoisonCloud>(); Save(go, "EnemyPoison");
-            }
             if (!Prefab("CounterPoison"))
             {
                 var go = new GameObject("Effect_CounterPoison"); go.transform.localScale = new Vector3(3f, 2f, 1f);
@@ -88,6 +83,18 @@ namespace FishingPrototype.Editor
                     var renderer=puff.AddComponent<SpriteRenderer>(); renderer.sprite=sprite;renderer.color=new Color(0.75f,0.25f,1f,0.85f);renderer.sortingOrder=6;
                 }
                 Save(go,"CounterPoison");
+            }
+            if (!Prefab("EnemyPoison"))
+            {
+                var go = UnityEngine.Object.Instantiate(Prefab("CounterPoison")); go.name = "Effect_EnemyPoison";
+                go.GetComponent<PoisonCloud>().damagesEnemies = false;
+                foreach (Transform puff in go.transform)
+                {
+                    puff.name = puff.name.Replace("PurpleSmoke", "GreenSmoke");
+                    puff.localScale = new Vector3(0.24f, 0.6f, 1f);
+                    puff.GetComponent<SpriteRenderer>().color = new Color(0.3f, 0.85f, 0.2f, 0.4f);
+                }
+                Save(go, "EnemyPoison");
             }
             if (!Prefab("SpawnWarning")) Save(Visual("Sprite_SpawnWarning",Vector2.zero,new Vector2(1.5f,0.12f),new Color(1f,0.55f,0.2f)),"SpawnWarning");
         }
