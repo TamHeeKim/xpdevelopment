@@ -61,3 +61,5 @@ Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 �
 | Player의 FishingRodController | shurikenCounterRange 2.5, shurikenCounterMotionTime 0.3초 |
 
 적 체력(생성 시)·이동속도·추가 포획 시간은 각각 연결된 SO를 사용합니다. 독가스병은 ENEMY_CH01_DANGGA_001, 수리검병은 ENEMY_CH01_DANGGA_002입니다. 새 행동 수치를 시트로 옮길 때 위 필드 이름과 비율 단위를 기준으로 연결하면 됩니다.
+
+적 프리팹의 `healthMultiplier`는 1.2입니다. 생성 시 SO 체력에 곱하므로 현재 독가스병 90, 수리검병 96이며 시트 원본은 유지합니다. 독가스의 사각형 배경 표시는 끄고 연기 파츠만 표시합니다.

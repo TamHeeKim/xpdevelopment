@@ -972,6 +972,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a910257bb0dd2a4cacc7b0746ecb377, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.HookableBody
+  healthMultiplier: 1.2
   kind: 0
   maxHealth: 150
   baseColor: {r: 0.25, g: 0.16, b: 0.36, a: 1}

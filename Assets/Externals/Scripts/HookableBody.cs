@@ -16,6 +16,8 @@ namespace FishingPrototype
         public BodyKind kind;
         [UnityEngine.Serialization.FormerlySerializedAs("MaxHealth")]
         public float maxHealth = 100f;
+        [Min(0.01f), Tooltip("생성 시 적의 최대 체력에 적용하는 배율입니다. SO 원본 값은 변경하지 않습니다.")]
+        public float healthMultiplier = 1f;
         [UnityEngine.Serialization.FormerlySerializedAs("BaseColor")]
         public Color baseColor = Color.white;
         [UnityEngine.Serialization.FormerlySerializedAs("RespawnOnDeath")]
@@ -56,6 +58,7 @@ namespace FishingPrototype
             visual = GetComponent<SpriteRenderer>();
             baseColor = visual.color;
             if (kind == BodyKind.Enemy && statDefinition) maxHealth = statDefinition.Values.hp;
+            if (kind == BodyKind.Enemy) maxHealth *= healthMultiplier;
             health = maxHealth;
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
