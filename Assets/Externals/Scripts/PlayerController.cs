@@ -29,7 +29,7 @@ namespace FishingPrototype
                 return;
             }
             moveInput = (((Keyboard.current?.dKey.isPressed ?? false) || (Keyboard.current?.rightArrowKey.isPressed ?? false)) ? 1f : 0f) - (((Keyboard.current?.aKey.isPressed ?? false) || (Keyboard.current?.leftArrowKey.isPressed ?? false)) ? 1f : 0f);
-            if ((Keyboard.current?.wKey.wasPressedThisFrame ?? false)) lastJumpTime = Time.time;
+            if ((Keyboard.current?.spaceKey.wasPressedThisFrame ?? false)) lastJumpTime = Time.time;
         }
 
         private void FixedUpdate()

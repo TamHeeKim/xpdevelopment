@@ -18,7 +18,7 @@ hud.attack_controls,좌클릭: 공격·포획  /  수리검 Q: 반격,
 ui.close,닫기,
 ui.open,열기,
 hud.help_title,낚싯대 전투 · 조작 안내,
-hud.help_body,"A / D   이동       W   점프
+hud.help_body,"A / D   이동       스페이스바   점프
 좌클릭   공격 · 유지하면 포획
 E   내려찍기       Q   커서 방향 투척
 포획 완료 후 좌클릭을 떼어도 유지
