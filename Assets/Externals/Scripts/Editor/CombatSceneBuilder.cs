@@ -120,7 +120,6 @@ namespace FishingPrototype.Editor
             {
                 string name=heavy?"ShurikenEnemy":"PoisonEnemy";if(Prefab(name))continue;
                 var go=CombatAuthoring.CreateHookable("Enemy_"+name,Vector2.zero,heavy?new Vector2(1.35f,2.15f):new Vector2(0.85f,1.65f),Color.red,HookableBody.BodyKind.Enemy,heavy?3.4f:1.15f,heavy?150f:72f,false,heavy?"enemy.shuriken":"enemy.poison");
-                go.GetComponent<HookableBody>().healthMultiplier=1.2f;
                 go.GetComponent<Rigidbody2D>().freezeRotation=true;CombatShapes.DressEnemy(go,heavy);
                 var ai=go.AddComponent<TangEnemyAI>();ai.enemyType=heavy?TangEnemyAI.EnemyType.Shuriken:TangEnemyAI.EnemyType.Poison;
                 var point=new GameObject("Point_AttackOrigin");point.transform.SetParent(go.transform,false);point.transform.localPosition=new Vector3(0.85f,0.15f,0);ai.attackPoint=point.transform;ai.attackVisual=go.transform.Find("Sprite_독주머니");
