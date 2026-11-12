@@ -15,10 +15,13 @@ MonoBehaviour:
   enemyTable: 1
   values:
     actorId: ENEMY_CH01_DANGGA_001
-    hp: 60
-    attack: 12
-    defense: 20
-    moveSpeed: 3
+    hp: 75
+    attack: 20
+    defense: 40
+    moveSpeed: 5
+    attackWidth: 0
+    catchRange: 0
+    catchHold: 0.1
     chapter: 1
     faction: "\uC0AC\uCC9C\uB2F9\uAC00"
-    sourceName: Dangga
+    sourceName: "\uB3C5\uAC00\uC2A4\uBCD1"

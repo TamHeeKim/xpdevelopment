@@ -42,9 +42,18 @@ namespace FishingPrototype.Integration
             }
             if (quoted) throw new FormatException("Unclosed CSV quote.");
             if (cell.Length > 0 || row.Count > 0) { row.Add(cell.ToString()); rows.Add(row); }
-            string[] headers = expectedHeader.Split(',');
-            if (rows.Count == 0 || string.Join(",", rows[0]).TrimEnd(',') != expectedHeader)
-                throw new FormatException("Unexpected sheet header: " + expectedHeader);
+            string[] required = expectedHeader.Split(',');
+            if (rows.Count == 0 || rows[0].Count < required.Length) throw new FormatException("Missing sheet headers.");
+            for (int i = 0; i < required.Length; i++)
+                if (rows[0][i] != required[i]) throw new FormatException("Unexpected sheet header: " + expectedHeader);
+            while (rows[0].Count > required.Length && rows[0][rows[0].Count - 1] == "") rows[0].RemoveAt(rows[0].Count - 1);
+            string[] headers = rows[0].ToArray();
+            var names = new HashSet<string>();
+            for (int i = 0; i < headers.Length; i++)
+            {
+                if (!names.Add(headers[i])) throw new FormatException("Duplicate sheet column: " + headers[i]);
+                if (string.IsNullOrWhiteSpace(headers[i])) throw new FormatException("Empty sheet column.");
+            }
             var result = new List<Dictionary<string, string>>();
             var ids = new HashSet<string>();
             for (int i = 1; i < rows.Count; i++)

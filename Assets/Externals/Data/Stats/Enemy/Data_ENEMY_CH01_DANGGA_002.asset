@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13d711d9cab84624b8fcf45f9a254afa, type: 3}
+  m_Name: Data_ENEMY_CH01_DANGGA_002
+  m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.Integration.CombatStatDefinition
+  enemyTable: 1
+  values:
+    actorId: ENEMY_CH01_DANGGA_002
+    hp: 80
+    attack: 30
+    defense: 40
+    moveSpeed: 5
+    attackWidth: 0
+    catchRange: 0
+    catchHold: 0.1
+    chapter: 1
+    faction: "\uC0AC\uCC9C\uB2F9\uAC00"
+    sourceName: "\uC218\uB9AC\uAC80\uBCD1"
