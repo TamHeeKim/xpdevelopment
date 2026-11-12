@@ -12,10 +12,10 @@ namespace FishingPrototype.Editor
     // 최초 프리팹 이관용. 이미 존재하는 프리팹과 아트는 덮어쓰지 않는다.
     public static class PlayerPrefabBuilder
     {
-        public const string playerPath = "Assets/FishingCombat/Prefabs/Prefab_Player.prefab";
-        public const string rodPath = "Assets/FishingCombat/Prefabs/Prefab_Rod.prefab";
-        private const string artPath = "Assets/FishingCombat/Art/Player";
-        private const string scenePath = "Assets/FishingCombat/Scenes/FishingPrototype.unity";
+        public const string playerPath = "Assets/Externals/Prefabs/Prefab_Player.prefab";
+        public const string rodPath = "Assets/Externals/Prefabs/Prefab_Rod.prefab";
+        private const string artPath = "Assets/Externals/Textures/Combat";
+        private const string scenePath = "Assets/Externals/Scenes/FishingPrototype.unity";
 
         [MenuItem("낚싯대 전투/플레이어 프리팹 생성 및 씬 배치")]
         public static void CreateAndPlace()
@@ -23,7 +23,7 @@ namespace FishingPrototype.Editor
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("플레이를 종료한 뒤 프리팹을 배치하세요.");
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            Directory.CreateDirectory("Assets/FishingCombat/Prefabs");
+            Directory.CreateDirectory("Assets/Externals/Prefabs");
             Directory.CreateDirectory(artPath);
             AssetDatabase.Refresh();
             var preview = EditorSceneManager.NewPreviewScene();

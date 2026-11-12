@@ -48,3 +48,12 @@
 - 사용자 피드백 반영: 새 기획 적용 과정에서 잃었던 PoC의 곡선 전개/낚싯줄 처짐/포획 관성 복원. 강제 위치 이동·Kinematic 포획 제거, 힘과 장력으로 거리 조정 및 E 내려찍기. E 피해는 실제 충돌 시 1회, 일반 Q는 운동 속도 유지(기본 속도 하한), 수리검 규칙 유지. 자동 회귀·입력 Play·화면 렌더·Windows 빌드 통과. 로컬 시트 자동 갱신 SO 변경/신규 적 SO는 이번 수정 커밋에서 제외하고 보존.
 
 - 클릭 시 직선 가이드 표시 제거. 곡선 낚싯줄과 공격 판정은 유지. 표시 활성화 코드 제거 및 diff 검사 완료.
+
+
+## Externals 폴더 통합 (2026-11-12)
+
+- 공유 에셋을 Assets/Externals 아래로 통합: Scripts/Editor, Scenes, Prefabs, Textures/Combat, Materials, Sounds, Resources, Settings, Docs, TutorialInfo. 기존 Data/Stats 구조 유지.
+- 파일과 .meta를 함께 이동하여 에셋 GUID 및 씬/프리팹 참조 보존. 합쳐진 빈 폴더의 메타만 제거. 기본 PoC와 Linebreaker는 변경하지 않음.
+- 에디터 생성/검사/씬 열기 경로, 빌드 씬 목록, 템플릿 기본 씬, 안내 문서 경로 갱신. 효과음 생성 시 Sounds 폴더 준비 추가.
+- 정적 검증: 이동 전후 GUID/바이너리 보존, GUID 중복 없음, 에디터 참조 경로 존재, 이전 경로 잔존 없음, git diff 검사 통과.
+- 실행 검증 한계: 기존 검증 캐시 및 새 임시 Unity 프로젝트 모두 Initial Refresh에서 진행되지 않아 검증 프로세스만 종료. 이번 변경의 Play/Windows 빌드는 미검증이며 사용자 Unity 에디터는 종료하지 않음.

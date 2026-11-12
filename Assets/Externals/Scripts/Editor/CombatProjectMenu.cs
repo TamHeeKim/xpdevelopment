@@ -7,7 +7,7 @@ namespace FishingPrototype.Editor
 {
     public static class CombatProjectMenu
     {
-        const string scenePath = "Assets/FishingCombat/Scenes/FishingPrototype.unity";
+        const string scenePath = "Assets/Externals/Scenes/FishingPrototype.unity";
         [MenuItem("낚싯대 전투/전투 씬 열기")]
         public static void Open()
         {

@@ -25,7 +25,7 @@ Play 전부터 플레이어·맵·카메라·호리병·HUD가 씬에 저장되�
 | 진행 시스템 | Prefab_Systems / System_Combat | 출현 프리팹·웨이브 수·간격·씬 참조·중력 |
 | 화면 UI | Prefab_Hud / Canvas_CombatHud | Canvas/RectTransform 배치·폰트·크기·색·게이지 |
 
-위 프리팹은 모두 `Assets/FishingCombat/Prefabs`에 있다. 외형 PNG·선 머티리얼·포획 WAV는 Art 폴더에 있다.
+위 프리팹은 모두 `Assets/Externals/Prefabs`에 있다. 외형 PNG는 `Textures/Combat`, 선 머티리얼은 `Materials`, 포획 WAV는 `Sounds`에 있다. 모두 `Assets/Externals` 기준이다.
 Level의 Point_FirstLeft/Right, Point_SecondLeft/Right가 실제 적 출현 위치다. StageDirector의 Transform 참조를 유지한다.
 Point_StartCheckpoint/MiddleCheckpoint는 저장 위치, Point_FirstTrigger/SecondTrigger는 전투 구역 진입 기준이다.
 씬에서 수정한 프리팹 인스턴스는 필요한 변경만 Apply한다. 다른 사람과 씬 편집이 겹치면 프리팹으로 변경을 전달하고 필요한 위치에서 unpack한다.

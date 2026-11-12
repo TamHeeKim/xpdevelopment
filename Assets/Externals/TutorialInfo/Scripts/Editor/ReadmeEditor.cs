@@ -12,7 +12,7 @@ public class ReadmeEditor : Editor
 {
     static string s_ShowedReadmeSessionStateName = "ReadmeEditor.showedReadme";
     
-    static string s_ReadmeSourceDirectory = "Assets/TutorialInfo";
+    static string s_ReadmeSourceDirectory = "Assets/Externals/TutorialInfo";
 
     const float k_Space = 16f;
 
@@ -71,7 +71,7 @@ public class ReadmeEditor : Editor
         var assembly = typeof(EditorApplication).Assembly;
         var windowLayoutType = assembly.GetType("UnityEditor.WindowLayout", true);
         var method = windowLayoutType.GetMethod("LoadWindowLayout", BindingFlags.Public | BindingFlags.Static);
-        method.Invoke(null, new object[] { Path.Combine(Application.dataPath, "TutorialInfo/Layout.wlt"), false });
+        method.Invoke(null, new object[] { Path.Combine(Application.dataPath, "Externals/TutorialInfo/Layout.wlt"), false });
     }
 
     static Readme SelectReadme()

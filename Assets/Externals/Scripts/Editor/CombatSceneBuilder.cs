@@ -11,10 +11,10 @@ namespace FishingPrototype.Editor
 {
     public static class CombatSceneBuilder
     {
-        public const string scenePath = "Assets/FishingCombat/Scenes/FishingPrototype.unity";
-        const string prefabFolder = "Assets/FishingCombat/Prefabs/";
-        const string materialPath = "Assets/FishingCombat/Art/Material_CombatLine.mat";
-        const string soundPath = "Assets/FishingCombat/Art/Audio_Capture.wav";
+        public const string scenePath = "Assets/Externals/Scenes/FishingPrototype.unity";
+        const string prefabFolder = "Assets/Externals/Prefabs/";
+        const string materialPath = "Assets/Externals/Materials/Material_CombatLine.mat";
+        const string soundPath = "Assets/Externals/Sounds/Audio_Capture.wav";
         static Color panel = new Color(0.035f, 0.065f, 0.085f, 0.94f);
         static Color accent = new Color(0.25f, 0.9f, 0.77f);
 
@@ -176,7 +176,7 @@ namespace FishingPrototype.Editor
         static Text LocalText(Transform parent,string key,float x,float y,float w,float h,int size)
         {var text=Text(parent,"Text_"+key.Replace('.','_'),x,y,w,h,CombatText.Get(key),size);text.gameObject.AddComponent<LocalizedText>().textKey=key;return text;}
         static Image Image(Transform parent,string name,float x,float y,float w,float h,Color color)
-        {var image=Rect(parent,name,x,y,w,h).gameObject.AddComponent<Image>();image.color=color;image.sprite=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/FishingCombat/Art/Player/Sprite_Rod_00.png");image.raycastTarget=false;return image;}
+        {var image=Rect(parent,name,x,y,w,h).gameObject.AddComponent<Image>();image.color=color;image.sprite=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Externals/Textures/Combat/Sprite_Rod_00.png");image.raycastTarget=false;return image;}
         static void Fill(Image image){image.type=UnityEngine.UI.Image.Type.Filled;image.fillMethod=UnityEngine.UI.Image.FillMethod.Horizontal;image.fillOrigin=0;}
         static void BuildHud()
         {
@@ -213,7 +213,7 @@ namespace FishingPrototype.Editor
                     var rb=tip.AddComponent<Rigidbody2D>();rb.bodyType=RigidbodyType2D.Kinematic;rb.gravityScale=0.25f;rb.collisionDetectionMode=CollisionDetectionMode2D.Continuous;
                     var collider=tip.AddComponent<CircleCollider2D>();collider.isTrigger=true;collider.radius=1.1f;tip.GetComponent<SpriteRenderer>().sortingOrder=5;
                     PlayerPrefabBuilder.BakeSprites(tip,"LineTip");
-                    Directory.CreateDirectory("Assets/FishingCombat/Art");
+                    Directory.CreateDirectory(Path.GetDirectoryName(materialPath));
                     var material=AssetDatabase.LoadAssetAtPath<Material>(materialPath);
                     if(!material){material=new Material(Shader.Find("Sprites/Default"));AssetDatabase.CreateAsset(material,materialPath);}
                     var line=MakeLine(rod.transform,"Line_Rope",24,0.055f,0.035f,new Color(0.82f,0.91f,0.96f),new Color(0.48f,0.7f,0.78f),2,material);
@@ -225,6 +225,7 @@ namespace FishingPrototype.Editor
                 {
                     if(!File.Exists(soundPath))
                     {
+                        Directory.CreateDirectory(Path.GetDirectoryName(soundPath));
                         using(var writer=new BinaryWriter(File.Create(soundPath)))
                         { int count=2205;writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));writer.Write(36+count*2);writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));writer.Write(16);writer.Write((short)1);writer.Write((short)1);writer.Write(22050);writer.Write(44100);writer.Write((short)2);writer.Write((short)16);writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));writer.Write(count*2);for(int i=0;i<count;i++)writer.Write((short)(Mathf.Sin(i*0.18f)*0.1f*(1f-i/(float)count)*32767)); }
                         AssetDatabase.ImportAsset(soundPath);

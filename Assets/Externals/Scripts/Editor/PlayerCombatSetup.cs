@@ -14,7 +14,7 @@ namespace FishingPrototype.Editor
             UpgradePlayer();
             foreach (string name in new[] { "NormalEnemy", "HeavyEnemy" })
             {
-                string path = "Assets/FishingCombat/Prefabs/Prefab_" + name + ".prefab";
+                string path = "Assets/Externals/Prefabs/Prefab_" + name + ".prefab";
                 var root = PrefabUtility.LoadPrefabContents(path);
                 try
                 {
