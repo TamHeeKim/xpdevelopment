@@ -16,6 +16,15 @@ namespace FishingPrototype
             canvas.enabled = body.Body && body.Body.simulated;
             canvas.transform.position = body.transform.position + new Vector3(offset.x, body.GetComponent<Collider2D>().bounds.extents.y + offset.y, 0f);
             canvas.transform.rotation = Quaternion.identity;
+            var shuriken = body.GetComponent<Shuriken>();
+            if (shuriken)
+            {
+                canvas.enabled = shuriken.CounterAvailable;
+                nameText.text = CombatText.Get("input.counter");
+                healthFill.transform.parent.gameObject.SetActive(true);
+                healthFill.enabled = false;
+                return;
+            }
             nameText.text = body.DisplayName + (body.IsHooked ? CombatText.Get("hud.hooked_suffix") : "");
             healthFill.transform.parent.gameObject.SetActive(body.kind == HookableBody.BodyKind.Enemy);
             healthFill.fillAmount = body.HealthFraction;

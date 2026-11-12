@@ -32,6 +32,11 @@ namespace FishingPrototype
         [Min(0.1f)] public float swingForce = 27f;
         [Min(0)] public float holdDamping = 4f;
         [Min(0.1f)] public float reelSpeed = 3.8f;
+        [Header("수리검 Q 반격")]
+        [Min(0)] public float shurikenCounterRange = 2.5f;
+        [Min(0)] public float shurikenCounterMotionTime = 0.3f;
+        private Shuriken counterStar;
+        public bool CanCounter => state == RodState.Idle && (!counterStar || !counterStar.IsCountering) && player && player.Body && player.Body.simulated && !player.ControlsLocked;
         private const float baseHoldTime = 0.3f, attackDuration = 0.5f;
         public float Attack => statDefinition ? statDefinition.Values.attack : attack;
         public float AttackWidth => statDefinition && statDefinition.Values.attackWidth > 0 ? statDefinition.Values.attackWidth : attackWidth;
@@ -73,10 +78,15 @@ namespace FishingPrototype
             UpdateRodVisual();
             Vector2 cursor = Camera.main ? (Vector2)Camera.main.ScreenToWorldPoint(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero) : RodAnchor + aim;
             if ((cursor - (Vector2)player.transform.position).sqrMagnitude > 0.0001f) aim = (cursor - (Vector2)player.transform.position).normalized;
+            if (counterStar && counterStar.IsCountering) return;
+            if (Keyboard.current?.qKey.wasPressedThisFrame ?? false)
+            {
+                if (state == RodState.Held) ThrowHeld(aim);
+                else if (TryCounter()) return;
+            }
             if (Mouse.current?.leftButton.wasPressedThisFrame ?? false) BeginPress(cursor);
             if ((Mouse.current?.leftButton.wasReleasedThisFrame ?? false) && (state == RodState.Extending || state == RodState.Catching)) CancelCapture();
             if (Keyboard.current?.eKey.wasPressedThisFrame ?? false) BeginSlam();
-            if (Keyboard.current?.qKey.wasPressedThisFrame ?? false) ThrowHeld(aim);
             UpdateTargetOutline(state == RodState.Idle ? SelectCatchTarget(cursor) : target);
         }
         private void FixedUpdate()
@@ -311,8 +321,23 @@ namespace FishingPrototype
             released.Body.linearVelocity = velocity * speed;
             bodyClaimed = false; hooked = target = null; state = RodState.Idle;
         }
+        public bool TryCounter()
+        {
+            if (!CanCounter) return false;
+            Shuriken nearest = null; float distance = float.PositiveInfinity;
+            foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None))
+            {
+                if (!star.CounterAvailable) continue;
+                float candidateDistance = (star.GetComponent<Rigidbody2D>().position - player.Body.position).sqrMagnitude;
+                if (candidateDistance < distance) { nearest = star; distance = candidateDistance; }
+            }
+            if (!nearest || !nearest.BeginCounter(player, shurikenCounterMotionTime)) return false;
+            counterStar = nearest;
+            return true;
+        }
         public void Interrupt()
         {
+            if (counterStar) counterStar.CancelCounter();
             CancelCapture(); attackUntil = float.NegativeInfinity;
             if (attackCollider) attackCollider.enabled = false;
         }

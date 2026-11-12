@@ -288,7 +288,7 @@ GameObject:
   - component: {fileID: 3127415051192751802}
   - component: {fileID: 1761175199966869448}
   m_Layer: 0
-  m_Name: Prefab_NormalEnemy
+  m_Name: Prefab_PoisonEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -307,6 +307,7 @@ Transform:
   m_LocalScale: {x: 0.85, y: 1.65, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 9100000000000000002}
   - {fileID: 6787504530950725009}
   - {fileID: 1236001591568718175}
   - {fileID: 62411767191836756}
@@ -470,7 +471,7 @@ MonoBehaviour:
   catchHold: 0
   targetingCollider: {fileID: 7903521475333519978}
   throwDamageDuration: 2
-  displayNameKey: enemy.normal
+  displayNameKey: enemy.poison
 --- !u!114 &1761175199966869448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -484,9 +485,20 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.TangEnemyAI
   player: {fileID: 0}
-  poisonTriggerRadius: 4
   poisonCloudPrefab: {fileID: 3718590734056539279, guid: 542da4c117458874a9a29698cb85fe21, type: 3}
   shurikenPrefab: {fileID: 4529165647080639436, guid: 36583d00bb3e21a4b833e588a52c1a87, type: 3}
+  enemyType: 0
+  attackPoint: {fileID: 9100000000000000002}
+  attackVisual: {fileID: 5938209178102774222}
+  detectionRange: 12
+  moveSpeed: 2
+  attackRange: 4
+  attackWindupTime: 0.6
+  sprayDuration: 2
+  gasRange: 4
+  attackRecoveryTime: 1.5
+  minKeepDistance: 3
+  maxKeepDistance: 5
 --- !u!1 &4618186774064780641
 GameObject:
   m_ObjectHideFlags: 0
@@ -1228,3 +1240,31 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &9100000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9100000000000000002}
+  m_Layer: 0
+  m_Name: Point_AttackOrigin
+  m_TagString: Untagged
+  m_IsActive: 1
+--- !u!4 &9100000000000000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9100000000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.85, y: 0.15, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7040131944740933030}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

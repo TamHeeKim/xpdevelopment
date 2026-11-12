@@ -122,43 +122,7 @@ namespace FishingPrototype.Editor
                 throw new Exception("되던진 수리검의 플레이어 충돌 제외는 유지되어야 한다");
             UnityEngine.Object.DestroyImmediate(heldObject);
             UnityEngine.Object.DestroyImmediate(playerObject);
-            var gasPlayerObject = new GameObject("Test_독가스검사플레이어");
-            var gasPlayer = gasPlayerObject.AddComponent<PlayerController>();
-            typeof(PlayerController).GetMethod("Awake", flags).Invoke(gasPlayer, null);
-            gasPlayer.Body.position = new Vector2(4f, 0f);
-            var gasEnemyObject = new GameObject("Test_독가스검사적");
-            var gasBody = gasEnemyObject.AddComponent<HookableBody>();
-            typeof(HookableBody).GetField("<Body>k__BackingField", flags).SetValue(gasBody, gasEnemyObject.GetComponent<Rigidbody2D>());
-            var gasAI = gasEnemyObject.AddComponent<TangEnemyAI>();
-            gasAI.player = gasPlayer;
-            gasAI.poisonCloudPrefab = CombatSceneBuilder.Prefab("EnemyPoison").GetComponent<PoisonCloud>();
-            gasAI.shurikenPrefab = CombatSceneBuilder.Prefab("Shuriken").GetComponent<Shuriken>();
-            typeof(TangEnemyAI).GetMethod("Start", flags).Invoke(gasAI, null);
-            var gasTick = typeof(TangEnemyAI).GetMethod("FixedUpdate", flags);
-            var gasState = typeof(TangEnemyAI).GetField("state", flags);
-            var gasUntil = typeof(TangEnemyAI).GetField("until", flags);
-            typeof(TangEnemyAI).GetField("cooldown", flags).SetValue(gasAI, Time.time + 100f);
-            gasTick.Invoke(gasAI, null);
-            if ((int)gasState.GetValue(gasAI) != 1 || Mathf.Abs((float)gasUntil.GetValue(gasAI) - Time.time - 2f) > 0.01f || gasBody.Body.linearVelocity.x <= 0f)
-                throw new Exception("독가스는 반경 4에서 수리검 대기와 무관하게 2초 접근을 시작해야 한다");
-            gasPlayer.Body.position = new Vector2(-4f, 0f);
-            gasTick.Invoke(gasAI, null);
-            if (gasBody.Body.linearVelocity.x >= 0f)
-                throw new Exception("독가스 접근 중 플레이어 방향을 추적해야 한다");
-            gasUntil.SetValue(gasAI, Time.time - 1f);
-            gasTick.Invoke(gasAI, null);
-            var gasCloud = UnityEngine.Object.FindFirstObjectByType<PoisonCloud>();
-            if (!gasCloud || gasCloud.transform.position.x >= gasBody.Body.position.x || gasBody.Body.linearVelocity.x != 0f)
-                throw new Exception("접근 후 정지하고 전방에 독가스를 생성해야 한다");
-            typeof(PoisonCloud).GetMethod("Start", flags).Invoke(gasCloud, null);
-            if (Mathf.Abs((float)typeof(PoisonCloud).GetField("expires", flags).GetValue(gasCloud) - Time.time - 3f) > 0.01f)
-                throw new Exception("독가스는 3초 유지되어야 한다");
-            gasTick.Invoke(gasAI, null);
-            if ((int)gasState.GetValue(gasAI) == 1)
-                throw new Exception("독가스 재사용 대기 중 즉시 다시 접근하면 안 된다");
-            UnityEngine.Object.DestroyImmediate(gasCloud.gameObject);
-            UnityEngine.Object.DestroyImmediate(gasEnemyObject);
-            UnityEngine.Object.DestroyImmediate(gasPlayerObject);
+            EnemyCombatChecks.Run();
             var smokeEnemy = new GameObject("Test_반격연기검사적");
             var smokeTarget = smokeEnemy.AddComponent<HookableBody>();
             smokeEnemy.AddComponent<BoxCollider2D>();

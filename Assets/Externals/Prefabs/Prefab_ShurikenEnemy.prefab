@@ -700,7 +700,7 @@ GameObject:
   - component: {fileID: 5534548619026813118}
   - component: {fileID: 5960510652954110831}
   m_Layer: 0
-  m_Name: "Sprite_\uB3C5\uC8FC\uBA38\uB2C8"
+  m_Name: "Sprite_Shuriken"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -770,8 +770,8 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 4
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 0d02e90d7872fe949bb4c2e27f81f0f5, type: 3}
-  m_Color: {r: 0.53, g: 0.77, b: 0.24, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 85f41a360430e49409407aa616684742, type: 3}
+  m_Color: {r: 0.78, g: 0.9, b: 0.96, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -795,7 +795,7 @@ GameObject:
   - component: {fileID: 6659922337712905617}
   - component: {fileID: 2028545565267865842}
   m_Layer: 0
-  m_Name: Prefab_HeavyEnemy
+  m_Name: Prefab_ShurikenEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -814,6 +814,7 @@ Transform:
   m_LocalScale: {x: 1.35, y: 2.15, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 9100000000000000002}
   - {fileID: 3430596483691688946}
   - {fileID: 5636142137627240790}
   - {fileID: 3441875315116501438}
@@ -975,11 +976,11 @@ MonoBehaviour:
   maxHealth: 150
   baseColor: {r: 0.25, g: 0.16, b: 0.36, a: 1}
   respawnOnDeath: 0
-  statDefinition: {fileID: 11400000, guid: 56d775563062a8b488ea670962a1d842, type: 2}
+  statDefinition: {fileID: 11400000, guid: ddb163a5dd7b25441858538fa42272b0, type: 2}
   catchHold: 0
   targetingCollider: {fileID: 3052290844711743698}
   throwDamageDuration: 2
-  displayNameKey: enemy.heavy
+  displayNameKey: enemy.shuriken
 --- !u!114 &2028545565267865842
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -993,9 +994,20 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.TangEnemyAI
   player: {fileID: 0}
-  poisonTriggerRadius: 4
   poisonCloudPrefab: {fileID: 3718590734056539279, guid: 542da4c117458874a9a29698cb85fe21, type: 3}
   shurikenPrefab: {fileID: 4529165647080639436, guid: 36583d00bb3e21a4b833e588a52c1a87, type: 3}
+  enemyType: 1
+  attackPoint: {fileID: 9100000000000000002}
+  attackVisual: {fileID: 5534548619026813118}
+  detectionRange: 12
+  moveSpeed: 2
+  attackRange: 4
+  attackWindupTime: 0.6
+  sprayDuration: 2
+  gasRange: 4
+  attackRecoveryTime: 1.5
+  minKeepDistance: 3
+  maxKeepDistance: 5
 --- !u!1 &6737566684315867160
 GameObject:
   m_ObjectHideFlags: 0
@@ -1412,3 +1424,31 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &9100000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9100000000000000002}
+  m_Layer: 0
+  m_Name: Point_AttackOrigin
+  m_TagString: Untagged
+  m_IsActive: 1
+--- !u!4 &9100000000000000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9100000000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.85, y: 0.15, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3278544190228066149}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

@@ -35,7 +35,8 @@ namespace FishingPrototype
         private void FixedUpdate()
         {
             if (ControlsLocked) return;
-            Body.linearVelocity = new Vector2(moveInput * moveSpeed * (GetComponent<PoisonStatus>() && Time.time < GetComponent<PoisonStatus>().until ? 0.6f : 1f), Body.linearVelocity.y);
+            var poison = GetComponent<PoisonStatus>();
+            Body.linearVelocity = new Vector2(moveInput * moveSpeed * (poison ? poison.SpeedMultiplier : 1f), Body.linearVelocity.y);
             if (Time.time - lastJumpTime < 0.12f && IsGrounded())
             {
                 Body.linearVelocity = new Vector2(Body.linearVelocity.x, jumpSpeed);

@@ -1,4 +1,4 @@
-﻿key,ko,en
+key,ko,en
 player.name,낚시꾼,
 object.unknown,오브젝트,
 object.rock,던지는 돌,
@@ -14,7 +14,7 @@ hud.ready,전투 준비,
 hud.hooked_suffix, · 포획,
 hud.capture_heavy,포획 중 · 좌클릭 유지,
 hud.held_controls,E: 내려찍기  /  Q: 커서 방향 투척,
-hud.attack_controls,좌클릭: 공격  /  유지: 포획,
+hud.attack_controls,좌클릭: 공격·포획  /  수리검 Q: 반격,
 ui.close,닫기,
 ui.open,열기,
 hud.help_title,낚싯대 전투 · 조작 안내,
@@ -24,7 +24,8 @@ E   내려찍기       Q   커서 방향 투척
 포획 완료 후 좌클릭을 떼어도 유지
 F   저장·회복
 F9   저장 불러오기       R   재시작
-수리검은 되던지고, 호리병은 독가스에 담그세요",
+수리검은 되던지고, 호리병은 독가스에 담그세요
+수리검 위 Q 표시: Q 반격 (손이 비어 있을 때)",
 status.hooked_suffix,  [포획 중],
 objective.start,시작 지점·첫 전투 다음 휴식 구간에서 F: 저장·회복  |  F9: 불러오기,
 objective.saved,저장·회복 완료  |  오른쪽으로 이동하세요,
@@ -41,3 +42,6 @@ health.value,체력  {0} / {1},
 wave.approach_count,{0} · 적 접근 중  {1}/{2},
 wave.remaining_count,{0} · 남은 적 {1},
 hud.health_value,{0} / {1},{0} / {1}
+enemy.poison,독가스병,
+enemy.shuriken,수리검병,
+input.counter,Q,Q
