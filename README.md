@@ -6,14 +6,12 @@ Unity 6000.3.11f1의 횡스크롤 낚싯대 액션 프로토타입입니다.
 
 Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 선택한 뒤 Play합니다.
 실행 씬: `Assets/Externals/Scenes/FishingPrototype.unity`.
-기본 PoC(`Assets/OriginalFishingPoC`)와 Linebreaker(`Assets/Linebreaker`)는 로컬에만 보관하며 Git 공유 대상에서 제외합니다.
 
 ## 개발
 
 - [팀 규칙](AGENTS.md)
 - [브랜치·PR·커밋 흐름](Docs/TeamWorkflow.md)
 - [1차 스프린트](Docs/Sprint-01.md)
-- [전투 구현과 메서드 안내](Assets/Externals/Docs/IMPLEMENTATION.md)
 - [게임 텍스트 CSV](Assets/Externals/Resources/Data_CombatText.csv)
 
 처음 복제한 뒤 `git config core.hooksPath .githooks`를 실행합니다.
@@ -31,7 +29,5 @@ Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 �
 - `Data/Stats`: 스프레드시트에서 가져온 스탯 SO
 - `Resources`: 이름으로 로드하는 CSV와 UI 폰트
 - `Models`, `Shaders`: 모델·셰이더
-- `Docs`: 전투 구현 문서
-- `TutorialInfo`: Unity 기본 안내 에셋
 
 `.meta` 파일을 함께 이동해 GUID를 유지합니다. `Resources` 내부 파일 이름은 런타임 로딩 키이므로 변경하지 않습니다.

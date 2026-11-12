@@ -64,3 +64,10 @@
 - 사용자 요청으로 Assets/Externals/Settings를 Assets/Settings로 이동. 파일 및 GUID 보존 검증.
 - TutorialInfo·Externals/Docs·Linebreaker·OriginalFishingPoC 삭제는 자동 승인 검토가 재귀 삭제를 blocked by policy로 거부하여 미실행. 삭제 대상 GUID를 유지 에셋에서 참조하지 않는 것은 확인.
 - 이번 작업의 Unity 실행·빌드 검증은 수행하지 않음.
+
+
+## 사용자 삭제 정리 반영 (2026-11-13)
+
+- 사용자가 삭제한 Externals/TutorialInfo 및 Externals/Docs를 Git에 반영. 로컬 Linebreaker·OriginalFishingPoC 폴더도 삭제된 상태 확인(기존 Git 제외 대상).
+- README와 AGENTS의 삭제 문서 링크·옛 폴더 안내 정리. 루트 Docs의 팀 규칙과 작업 기록은 유지.
+- 남은 에셋에서 삭제된 GUID 참조가 없는지 검사 통과. Unity 실행·빌드는 미검증.
