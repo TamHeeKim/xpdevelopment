@@ -15,10 +15,13 @@ MonoBehaviour:
   enemyTable: 0
   values:
     actorId: PLAYER_001
-    hp: 1
-    attack: 10
-    defense: 0
-    moveSpeed: 5
+    hp: 100
+    attack: 60
+    defense: 50
+    moveSpeed: 10
+    attackWidth: 1
+    catchRange: 10
+    catchHold: 0
     chapter: 0
-    faction:
-    sourceName:
+    faction: 
+    sourceName: 

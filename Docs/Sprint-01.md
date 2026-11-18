@@ -36,3 +36,38 @@
 - SO·Play 자동 갱신(2026-11-02): 플레이어·적 시트의 모든 행을 Assets/Externals/Data/Stats의 CombatStatDefinition SO로 가져오고, Assets/Externals/Scenes/Integration.unity의 적에 SO 할당 완료. Play 시작 및 완료 후 5초마다 시트 조회, 변경된 값만 영구 SO 에셋에 저장·적에 반영. 최대 체력 갱신은 기존 피해량을 보존하며 F키 피해는 인스턴스에서만 관리. 실제 원본 자동 조회 2회, 로컬 CSV 변경 입력에 대한 SO 갱신/참조 GUID 유지/60→80 최대 체력 변경 시 피해 10 보존(70/80), 변경 없음 건너뛰기, 잘못된 값 거부, F키·체력 0 하한 검사 통과. 테스트 데이터는 로컬에서 원래 SO 값으로 복구했으며 원본 시트 쓰기 없음. Unity 컴파일 및 diff 검사 통과.
 
 - 커밋 규칙 문서화(2026-11-03): Docs/CommitConvention.md 추가 및 AGENTS.md·TeamWorkflow.md 연결. 기존 commit-msg/pre-push 훅 활성화와 문서 형식 확인 완료.
+
+## 플레이어 기획 갱신 (2026-11-07)
+
+- feature/player: 0.5초 직선 공격(전체 폭 attackWidth, 적당 1회 attack 피해), 원형 타겟팅·0.3+catchHold 포획, 거리 catchRange/2 유지, E 내려찍기(120%/110%), Q 부채꼴 보정 투척 구현.
+- 수리검 flySpeed*2·attack*1.5, 포획 중 물리 충돌 피해 중복 방지, 사망 해제, 오브젝트 비파괴 유지. 저장 키 F로 이동하고 CSV 안내 갱신.
+- 기존 SO에 attackWidth/catchRange/catchHold 선택 열 파싱 추가. 원본 시트 쓰기 없음. 기본값 폭 0.6/포획 거리 7.5/추가 홀드 0. 일반/무거운 적은 현재 같은 사천당가 SO를 참조하며 종류별 SO 연결 가능.
+- 검증: 별도 Unity 6000.3.11f1에서 기본공격 유지·중복 방지, 타겟 우선순위·범위, 추가 홀드·취소, 포획 거리, 바닥/적/오브젝트 내려찍기·사망 해제, 투척 각도·동각 거리, 시트 이전/확장 헤더 검사 통과. 입력 주입 Play에서 좌클릭·E·Q·수리검 속도/명중 피해 확인. Windows64 빌드 통과. 검증 에디터의 기존 SearchDatabase 예외는 게임 로직 밖에서 발생.
+- 미검증: 장시간 직접 조작감, 원본 시트 새 열 실제 편집. 수치/연출 속도 미정 항목은 Inspector 기본값으로 적용. 회피/스킬 추가 없음.
+
+- 사용자 피드백 반영: 새 기획 적용 과정에서 잃었던 PoC의 곡선 전개/낚싯줄 처짐/포획 관성 복원. 강제 위치 이동·Kinematic 포획 제거, 힘과 장력으로 거리 조정 및 E 내려찍기. E 피해는 실제 충돌 시 1회, 일반 Q는 운동 속도 유지(기본 속도 하한), 수리검 규칙 유지. 자동 회귀·입력 Play·화면 렌더·Windows 빌드 통과. 로컬 시트 자동 갱신 SO 변경/신규 적 SO는 이번 수정 커밋에서 제외하고 보존.
+
+- 클릭 시 직선 가이드 표시 제거. 곡선 낚싯줄과 공격 판정은 유지. 표시 활성화 코드 제거 및 diff 검사 완료.
+
+
+## Externals 폴더 통합 (2026-11-12)
+
+- 공유 에셋을 Assets/Externals 아래로 통합: Scripts/Editor, Scenes, Prefabs, Textures/Combat, Materials, Sounds, Resources, Settings, Docs, TutorialInfo. 기존 Data/Stats 구조 유지.
+- 파일과 .meta를 함께 이동하여 에셋 GUID 및 씬/프리팹 참조 보존. 합쳐진 빈 폴더의 메타만 제거. 기본 PoC와 Linebreaker는 변경하지 않음.
+- 에디터 생성/검사/씬 열기 경로, 빌드 씬 목록, 템플릿 기본 씬, 안내 문서 경로 갱신. 효과음 생성 시 Sounds 폴더 준비 추가.
+- 정적 검증: 이동 전후 GUID/바이너리 보존, GUID 중복 없음, 에디터 참조 경로 존재, 이전 경로 잔존 없음, git diff 검사 통과.
+- 실행 검증 한계: 기존 검증 캐시 및 새 임시 Unity 프로젝트 모두 Initial Refresh에서 진행되지 않아 검증 프로세스만 종료. 이번 변경의 Play/Windows 빌드는 미검증이며 사용자 Unity 에디터는 종료하지 않음.
+
+
+## 설정 폴더 분리 (2026-11-13)
+
+- 사용자 요청으로 Assets/Externals/Settings를 Assets/Settings로 이동. 파일 및 GUID 보존 검증.
+- TutorialInfo·Externals/Docs·Linebreaker·OriginalFishingPoC 삭제는 자동 승인 검토가 재귀 삭제를 blocked by policy로 거부하여 미실행. 삭제 대상 GUID를 유지 에셋에서 참조하지 않는 것은 확인.
+- 이번 작업의 Unity 실행·빌드 검증은 수행하지 않음.
+
+
+## 사용자 삭제 정리 반영 (2026-11-13)
+
+- 사용자가 삭제한 Externals/TutorialInfo 및 Externals/Docs를 Git에 반영. 로컬 Linebreaker·OriginalFishingPoC 폴더도 삭제된 상태 확인(기존 Git 제외 대상).
+- README와 AGENTS의 삭제 문서 링크·옛 폴더 안내 정리. 루트 Docs의 팀 규칙과 작업 기록은 유지.
+- 남은 에셋에서 삭제된 GUID 참조가 없는지 검사 통과. Unity 실행·빌드는 미검증.

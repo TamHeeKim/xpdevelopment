@@ -10,6 +10,7 @@ namespace FishingPrototype.Integration
     {
         public string actorId;
         public float hp, attack, defense, moveSpeed;
+        public float attackWidth, catchRange, catchHold;
         public int chapter;
         public string faction, sourceName;
 
@@ -20,6 +21,9 @@ namespace FishingPrototype.Integration
                 actorId = row[enemy ? "enemyId" : "playerId"],
                 hp = Number(row, "hp"), attack = Number(row, "attack"),
                 defense = Number(row, "defense"), moveSpeed = Number(row, "moveSpeed"),
+                attackWidth = row.ContainsKey("attackWidth") ? Number(row, "attackWidth") : 0f,
+                catchRange = row.ContainsKey("catchRange") ? Number(row, "catchRange") : 0f,
+                catchHold = row.ContainsKey("catchHold") ? Number(row, "catchHold") : 0f,
                 faction = enemy ? row["faction"] : "", sourceName = enemy ? row["name"] : ""
             };
             if (result.hp <= 0) throw new FormatException("hp must be positive: " + result.actorId);
