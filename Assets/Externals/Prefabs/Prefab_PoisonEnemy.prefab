@@ -89,7 +89,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &1279281771060455578
 GameObject:
@@ -180,7 +180,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &2293215926334066360
 GameObject:
@@ -271,7 +271,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &3873319946315629355
 GameObject:
@@ -376,7 +376,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!50 &6439735451150334774
 Rigidbody2D:
@@ -468,9 +468,10 @@ MonoBehaviour:
   baseColor: {r: 0.12, g: 0.29, b: 0.27, a: 1}
   respawnOnDeath: 0
   statDefinition: {fileID: 11400000, guid: 56d775563062a8b488ea670962a1d842, type: 2}
-  catchHold: 0
+  canCatch: 1
+  breakOnSlam: 0
+  breakOnThrow: 0
   targetingCollider: {fileID: 7903521475333519978}
-  throwDamageDuration: 2
   displayNameKey: enemy.poison
 --- !u!114 &1761175199966869448
 MonoBehaviour:
@@ -484,21 +485,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b95760013a7d4654bc95a3c60cfa0366, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.TangEnemyAI
-  player: {fileID: 0}
-  poisonCloudPrefab: {fileID: 3718590734056539279, guid: 542da4c117458874a9a29698cb85fe21, type: 3}
-  shurikenPrefab: {fileID: 4529165647080639436, guid: 36583d00bb3e21a4b833e588a52c1a87, type: 3}
   enemyType: 0
+  player: {fileID: 0}
   attackPoint: {fileID: 9100000000000000002}
   attackVisual: {fileID: 5938209178102774222}
+  poisonCloudPrefab: {fileID: 3718590734056539279, guid: 542da4c117458874a9a29698cb85fe21, type: 3}
+  shurikenPrefab: {fileID: 4529165647080639436, guid: 36583d00bb3e21a4b833e588a52c1a87, type: 3}
   detectionRange: 12
   moveSpeed: 2
-  attackRange: 4
   attackWindupTime: 0.6
+  attackRecoveryTime: 1.5
+  attackRange: 4
   sprayDuration: 2
   gasRange: 4
-  attackRecoveryTime: 1.5
   minKeepDistance: 3
   maxKeepDistance: 5
+  hitStunTime: 0.18
+  separationDistance: 1.2
+  separationSpeed: 1.5
 --- !u!1 &4618186774064780641
 GameObject:
   m_ObjectHideFlags: 0
@@ -588,7 +592,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &5584609553517010299
 GameObject:
@@ -826,7 +830,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &7668663008959062146
 GameObject:
@@ -1068,7 +1072,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &8429820900121750452
 GameObject:
@@ -1238,7 +1242,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &9100000000000000001
 GameObject:
@@ -1252,6 +1256,9 @@ GameObject:
   m_Layer: 0
   m_Name: Point_AttackOrigin
   m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!4 &9100000000000000002
 Transform:

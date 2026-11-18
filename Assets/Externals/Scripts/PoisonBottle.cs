@@ -7,10 +7,9 @@ namespace FishingPrototype
         public PoisonCloud counterCloudPrefab;
         public bool Filled { get; private set; }
         public void Fill() { Filled = true; GetComponent<HookableBody>().SetDisplayNameKey("object.poison_bottle"); GetComponent<HookableBody>().baseColor = Color.green; GetComponent<SpriteRenderer>().color = Color.green; }
-        void OnCollisionEnter2D(Collision2D hit)
+        public void Burst()
         {
-            var body = GetComponent<HookableBody>();
-            if (!Filled || !body.IsThrown) return;
+            if (!Filled) return;
             Filled = false;
             PoisonCloud.Spawn(counterCloudPrefab, transform.position);
             Destroy(gameObject);

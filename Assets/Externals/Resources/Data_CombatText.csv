@@ -12,20 +12,18 @@ hud.tip,한 번의 포획으로 전세를 뒤집으세요,
 hud.objective,현재 목표,
 hud.ready,전투 준비,
 hud.hooked_suffix, · 포획,
-hud.capture_heavy,포획 중 · 좌클릭 유지,
-hud.held_controls,E: 내려찍기  /  Q: 커서 방향 투척,
-hud.attack_controls,좌클릭: 공격·포획  /  수리검 Q: 반격,
+hud.held_controls,좌클릭: 내려찍기 (지상)  /  우클릭: 던지기  /  수리검: 둘 다 던지기,
+hud.attack_controls,좌클릭: 채찍  /  우클릭: 연결 → 다시 우클릭: 당기기,
 ui.close,닫기,
 ui.open,열기,
 hud.help_title,낚싯대 전투 · 조작 안내,
-hud.help_body,"A / D   이동       스페이스바   점프
-좌클릭   공격 · 유지하면 포획
-E   내려찍기       Q   커서 방향 투척
-포획 완료 후 좌클릭을 떼어도 유지
-F   저장·회복
-F9   저장 불러오기       R   재시작
-수리검은 되던지고, 호리병은 독가스에 담그세요
-수리검 위 Q 표시: Q 반격 (손이 비어 있을 때)",
+hud.help_body,"A / D   이동       W   점프
+좌클릭   기본 채찍
+우클릭   대상 연결 → 다시 우클릭   당기기
+연결 중 좌클릭   포획 취소
+포획 후 좌클릭   지상 내려찍기 / 우클릭   던지기
+수리검   우클릭 즉시 포획 → 좌클릭·우클릭 투척
+F   저장·회복 / F9   불러오기 / R   재시작",
 status.hooked_suffix,  [포획 중],
 objective.start,시작 지점·첫 전투 다음 휴식 구간에서 F: 저장·회복  |  F9: 불러오기,
 objective.saved,저장·회복 완료  |  오른쪽으로 이동하세요,
@@ -44,4 +42,4 @@ wave.remaining_count,{0} · 남은 적 {1},
 hud.health_value,{0} / {1},{0} / {1}
 enemy.poison,독가스병,
 enemy.shuriken,수리검병,
-input.counter,Q,Q
+hud.capture_controls,좌클릭: 포획 취소  /  다시 우클릭: 당기기,

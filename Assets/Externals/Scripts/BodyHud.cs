@@ -19,10 +19,7 @@ namespace FishingPrototype
             var shuriken = body.GetComponent<Shuriken>();
             if (shuriken)
             {
-                canvas.enabled = shuriken.CounterAvailable;
-                nameText.text = CombatText.Get("input.counter");
-                healthFill.transform.parent.gameObject.SetActive(true);
-                healthFill.enabled = false;
+                canvas.enabled = false;
                 return;
             }
             nameText.text = body.DisplayName + (body.IsHooked ? CombatText.Get("hud.hooked_suffix") : "");

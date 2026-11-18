@@ -14,7 +14,7 @@ namespace FishingPrototype.Editor
         {
             var go = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab(name), root);
             go.transform.position = position;
-            var body = go.GetComponent<HookableBody>(); Call(body, "Awake");
+            var body = go.GetComponent<HookableBody>(); Call(body, "Awake"); body.statDefinition = null;
             body.Body.position = position; body.Body.gravityScale = 0; return body;
         }
         public static void Run()
@@ -61,7 +61,7 @@ namespace FishingPrototype.Editor
                 var rangedBody = Actor("ShurikenEnemy", root.transform, new Vector2(1002, 1000));
                 var ranged = rangedBody.GetComponent<TangEnemyAI>(); ranged.player = player; Call(ranged, "Start");
                 rangedBody.Body.position = new Vector2(1013, 1000); Call(ranged, "FixedUpdate");
-                Check(rangedBody.Body.linearVelocity.x < 0, "수리검병은 독가스 감지 거리 밖에서도 거리 조절해야 한다.");
+                Check(ranged.State == TangEnemyAI.ActionState.Waiting && rangedBody.Body.linearVelocity.x == 0, "수리검병은 최초 최대거리 밖에서 대기해야 한다.");
                 rangedBody.Body.position = new Vector2(1002, 1000);
                 Call(ranged, "FixedUpdate"); Check(rangedBody.Body.linearVelocity.x > 0, "너무 가까우면 물러나야 한다.");
                 rangedBody.Body.position = new Vector2(1006, 1000); Call(ranged, "FixedUpdate");
@@ -85,25 +85,34 @@ namespace FishingPrototype.Editor
 
                 var starBody = Actor("Shuriken", root.transform, new Vector2(1001, 1000));
                 var star = starBody.GetComponent<Shuriken>(); Call(star, "Awake"); star.Launch(rangedBody, Vector2.left);
-                Check(star.CounterAvailable, "반격 범위 안의 적 수리검은 Q 표시가 가능해야 한다.");
-                var stateType = typeof(FishingRodController).GetField("state", flags).FieldType;
-                Set(rod, "state", Enum.Parse(stateType, "Held"));
-                Check(!star.CounterAvailable && !rod.TryCounter(), "기존 포획 중에는 Q 투척을 우선해야 한다.");
-                Set(rod, "state", Enum.Parse(stateType, "Idle"));
-                starBody.Body.position = new Vector2(1000 + rod.shurikenCounterRange + 0.1f, 1000);
-                Check(!star.CounterAvailable, "반격 범위 밖에서는 Q 표시가 없어야 한다.");
-                starBody.Body.position = new Vector2(1001, 1000);
-                Check(rod.TryCounter() && !rod.TryCounter(), "한 번에 한 수리검만 반격해야 한다.");
-                Check(star.IsCountering && !starBody.Body.simulated && !star.CounterAvailable, "반격 모션 중 수리검 충돌과 재입력을 막아야 한다.");
-                Set(star, "counterStarted", Time.time - rod.shurikenCounterMotionTime - 1); Call(star, "Update");
-                Check(!star.IsCountering && starBody.Body.simulated && !starBody.IsHooked, "모션 종료 후 수리검을 해제해야 한다.");
-                Check(Mathf.Abs(starBody.Body.linearVelocity.magnitude - star.flySpeed * 1.5f) < 0.01f && star.HitDamage == star.attackDamage * 2f, "Q 반격 속도와 피해 배율이 일치해야 한다.");
+                Check(Physics2D.GetIgnoreCollision(star.GetComponent<Collider2D>(), gasBody.GetComponent<Collider2D>()), "적 수리검은 다른 적을 통과해야 한다.");
+                starBody.SetHooked(true); starBody.SetHooked(false); star.OnThrown();
+                Check(star.HitDamage == star.attackDamage * 1.5f, "수동 반격 피해 배율은 1.5배다.");
                 Check(!Physics2D.GetIgnoreCollision(star.GetComponent<Collider2D>(), gasBody.GetComponent<Collider2D>()), "반격 수리검은 다른 적도 맞혀야 한다.");
                 Check(Physics2D.GetIgnoreCollision(star.GetComponent<Collider2D>(), player.GetComponent<Collider2D>()), "반격 수리검이 플레이어를 맞히면 안 된다.");
+                Set(ranged, "state", TangEnemyAI.ActionState.Windup); Set(ranged, "until", Time.time + 1f);
+                ranged.Stun();
+                float originalEnd = (float)typeof(TangEnemyAI).GetField("stunUntil", flags).GetValue(ranged);
+                ranged.Stun();
+                Check((float)typeof(TangEnemyAI).GetField("stunUntil", flags).GetValue(ranged) == originalEnd, "추가 피격은 경직을 연장하면 안 된다.");
+                Set(ranged, "stunStarted", Time.time - 0.5f); Set(ranged, "stunUntil", Time.time - 0.01f);
+                Call(ranged, "FixedUpdate");
+                Check(ranged.State == TangEnemyAI.ActionState.Windup && (float)typeof(TangEnemyAI).GetField("until", flags).GetValue(ranged) > Time.time + 1.4f,
+                    "경직 중에는 공격 타이머가 보존되어야 한다.");
+                ranged.Stun(); rangedBody.SetHooked(true);
+                Check(!ranged.IsStunned && ranged.State == TangEnemyAI.ActionState.Waiting, "포획은 경직보다 우선하고 공격을 초기화해야 한다.");
+
+                rangedBody.SetHooked(false);
+                gasBody.transform.position = new Vector2(1004,1000); rangedBody.transform.position = new Vector2(1004.5f,1000);
+                gasBody.Body.position = gasBody.transform.position; rangedBody.Body.position = rangedBody.transform.position;
+                Physics2D.SyncTransforms(); Call(ranged,"MoveWithSeparation",0f);
+                Check(rangedBody.Body.linearVelocity.x > 0,"이동 중 가까운 적과의 간격을 벌려야 한다.");
+                gasBody.SetHooked(true); Call(ranged,"MoveWithSeparation",0f);
+                Check(rangedBody.Body.linearVelocity.x == 0,"포획된 적은 간격 유지 계산에서 제외해야 한다.");
 
                 var poison = player.GetComponent<PoisonStatus>(); poison.until = 0;
                 poison.Apply(3, 7, 0.25f, 0.3f);
-                Check(poison.status == PoisonStatus.PlayerStatus.poisoning && Mathf.Abs(poison.SpeedMultiplier - 0.7f) < 0.001f, "중독 상태와 감속 비율을 적용해야 한다.");
+                Check(poison.status == PoisonStatus.PlayerStatus.poison && Mathf.Abs(poison.SpeedMultiplier - 0.7f) < 0.001f, "중독 상태와 감속 비율을 적용해야 한다.");
                 float hp = health.Health; Set(poison, "nextTick", Time.time - 0.5f); Call(poison, "Update");
                 Check(health.Health == hp - 21, "밀린 중독 3틱을 누락 없이 합산해야 한다.");
                 Call(poison, "Update"); Check(health.Health == hp - 21, "이미 처리한 틱을 중복 적용하면 안 된다.");
@@ -126,7 +135,7 @@ namespace FishingPrototype.Editor
                 player.Body.position += Vector2.up * 10; Physics2D.SyncTransforms(); Call(contact, "FixedUpdate");
                 poison.until = Time.time + 0.1f; contact.refreshDurationOnContact = false;
                 player.Body.position = gasObject.transform.position; Physics2D.SyncTransforms(); Call(contact, "FixedUpdate");
-                Check(Mathf.Abs(poison.until - Time.time - contact.poisonDuration) < 0.01f, "재접촉하면 중독 시간을 갱신해야 한다.");
+                Check(Mathf.Abs(poison.until - Time.time - 0.1f) < 0.01f, "갱신 끔이면 중독 중 재접촉도 시간을 갱신하지 않는다.");
                 Debug.Log("ENEMY SPEC CHECKS PASSED");
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }

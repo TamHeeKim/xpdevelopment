@@ -157,7 +157,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &2182631759922610120
 GameObject:
@@ -248,7 +248,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &2730620745402971445
 GameObject:
@@ -339,7 +339,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &3280858672315514696
 GameObject:
@@ -430,7 +430,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &3617531626173071951
 GameObject:
@@ -521,7 +521,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &3694163117352978602
 GameObject:
@@ -687,7 +687,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &5186754204748613517
 GameObject:
@@ -700,7 +700,7 @@ GameObject:
   - component: {fileID: 5534548619026813118}
   - component: {fileID: 5960510652954110831}
   m_Layer: 0
-  m_Name: "Sprite_Shuriken"
+  m_Name: Sprite_Shuriken
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -778,7 +778,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &6580016732332537078
 GameObject:
@@ -885,7 +885,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!50 &9062717420504967264
 Rigidbody2D:
@@ -977,9 +977,10 @@ MonoBehaviour:
   baseColor: {r: 0.25, g: 0.16, b: 0.36, a: 1}
   respawnOnDeath: 0
   statDefinition: {fileID: 11400000, guid: ddb163a5dd7b25441858538fa42272b0, type: 2}
-  catchHold: 0
+  canCatch: 1
+  breakOnSlam: 0
+  breakOnThrow: 0
   targetingCollider: {fileID: 3052290844711743698}
-  throwDamageDuration: 2
   displayNameKey: enemy.shuriken
 --- !u!114 &2028545565267865842
 MonoBehaviour:
@@ -993,21 +994,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b95760013a7d4654bc95a3c60cfa0366, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.TangEnemyAI
-  player: {fileID: 0}
-  poisonCloudPrefab: {fileID: 3718590734056539279, guid: 542da4c117458874a9a29698cb85fe21, type: 3}
-  shurikenPrefab: {fileID: 4529165647080639436, guid: 36583d00bb3e21a4b833e588a52c1a87, type: 3}
   enemyType: 1
+  player: {fileID: 0}
   attackPoint: {fileID: 9100000000000000002}
   attackVisual: {fileID: 5534548619026813118}
+  poisonCloudPrefab: {fileID: 3718590734056539279, guid: 542da4c117458874a9a29698cb85fe21, type: 3}
+  shurikenPrefab: {fileID: 4529165647080639436, guid: 36583d00bb3e21a4b833e588a52c1a87, type: 3}
   detectionRange: 12
   moveSpeed: 2
-  attackRange: 4
   attackWindupTime: 0.6
+  attackRecoveryTime: 1.5
+  attackRange: 4
   sprayDuration: 2
   gasRange: 4
-  attackRecoveryTime: 1.5
   minKeepDistance: 3
   maxKeepDistance: 5
+  hitStunTime: 0.18
+  separationDistance: 1.2
+  separationSpeed: 1.5
 --- !u!1 &6737566684315867160
 GameObject:
   m_ObjectHideFlags: 0
@@ -1331,7 +1335,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &8774544236436626505
 GameObject:
@@ -1422,7 +1426,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &9100000000000000001
 GameObject:
@@ -1436,6 +1440,9 @@ GameObject:
   m_Layer: 0
   m_Name: Point_AttackOrigin
   m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
   m_IsActive: 1
 --- !u!4 &9100000000000000002
 Transform:

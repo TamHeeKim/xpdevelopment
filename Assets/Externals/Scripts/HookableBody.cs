@@ -1,6 +1,5 @@
 using FishingPrototype.Integration;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace FishingPrototype
@@ -22,19 +21,15 @@ namespace FishingPrototype
         public bool respawnOnDeath = true;
         [Header("포획 설정")]
         public CombatStatDefinition statDefinition;
-        [Min(0)] public float catchHold;
+        public bool canCatch = true;
+        public bool breakOnSlam, breakOnThrow;
         public CircleCollider2D targetingCollider;
-        public float CatchHold => statDefinition ? statDefinition.Values.catchHold : catchHold;
         public float Health => health;
         public Rigidbody2D Body { get; private set; }
         public bool IsHooked { get; private set; }
-        public event System.Action<Collider2D> HeldContact;
-        [UnityEngine.Serialization.FormerlySerializedAs("ThrowDamageDuration")]
-        [Header("투척 피해")]
-        public float throwDamageDuration = 2f;
-        private float thrownUntil = float.NegativeInfinity;
-        public bool IsThrown => !respawning && Time.time < thrownUntil;
-        private readonly Dictionary<int, float> impactTimes = new Dictionary<int, float>();
+        private bool thrown, impactPending;
+        private float selfImpactDamage, victimImpactDamage, savedDamping;
+        public bool IsThrown => !respawning && thrown;
 
         [Header("표시 이름")]
         [SerializeField] private string displayNameKey = "object.unknown";
@@ -63,8 +58,11 @@ namespace FishingPrototype
 
         public void SetHooked(bool value)
         {
-            if (value) { thrownUntil = float.NegativeInfinity; impactTimes.Clear(); }
-            else if (IsHooked && !respawning) thrownUntil = Time.time + throwDamageDuration;
+            if (value)
+            {
+                ClearThrow();
+                GetComponent<TangEnemyAI>()?.OnConnected();
+            }
             if (value) GetComponent<Shuriken>()?.Reflect();
             var hitbox = GetComponent<Collider2D>();
             if (value && !IsHooked && hitbox)
@@ -104,44 +102,43 @@ namespace FishingPrototype
             if (health <= 0f && !respawning) StartCoroutine(Respawn());
         }
 
-        public void ClearThrow() { thrownUntil = float.NegativeInfinity; impactTimes.Clear(); }
+        public void BeginThrow(float selfDamage, float victimDamage)
+        {
+            if (!thrown) savedDamping = Body.linearDamping;
+            Body.linearDamping = 0;
+            thrown = impactPending = true;
+            selfImpactDamage = Mathf.Max(0, selfDamage); victimImpactDamage = Mathf.Max(0, victimDamage);
+        }
+        public void ClearThrow() { if (thrown && Body) Body.linearDamping = savedDamping; thrown = impactPending = false; }
+        public void ResolveThrowImpact(Collider2D collider)
+        {
+            if (!IsThrown || !impactPending || IsHooked || GetComponent<Shuriken>() || collider.isTrigger || collider.GetComponent<PlayerController>()) return;
+            var partner = collider.GetComponentInParent<HookableBody>();
+            if (partner && (partner == this || partner.kind != BodyKind.Enemy)) return;
+            impactPending = false;
+            // 충돌 콜백 순서와 관계없이 병 효과는 투척이 끝나기 전에 한 번만 발동합니다.
+            GetComponent<PoisonBottle>()?.Burst();
+            ReceiveDamage(selfImpactDamage);
+            if (partner) partner.ReceiveDamage(victimImpactDamage);
+            if (kind == BodyKind.Prop && breakOnThrow) Destroy(gameObject);
+        }
 
         private void FixedUpdate()
         {
+            if (IsThrown && !impactPending)
+            {
+                foreach (var hit in Physics2D.RaycastAll(Body.position, Vector2.down, GetComponent<Collider2D>().bounds.extents.y + 0.15f))
+                    if (!hit.collider.isTrigger && hit.rigidbody != Body && hit.normal.y > 0.5f) { ClearThrow(); break; }
+            }
             if (kind != BodyKind.Prop || IsHooked || GetComponent<Shuriken>() || Body.position.y >= -12f) return;
             Body.position = spawnPosition;
             Body.rotation = spawnRotation.eulerAngles.z;
             Body.linearVelocity = Vector2.zero;
             Body.angularVelocity = 0f;
-            thrownUntil = float.NegativeInfinity;
-            impactTimes.Clear();
+            ClearThrow();
         }
 
-        private void OnCollisionStay2D(Collision2D collision)
-        {
-            if (IsHooked) HeldContact?.Invoke(collision.collider);
-        }
-        private void OnCollisionEnter2D(Collision2D collision)
-        {
-            if (IsHooked) { HeldContact?.Invoke(collision.collider); return; }
-            float speed = collision.relativeVelocity.magnitude;
-            if (speed < 4.5f || IsHooked || !IsThrown || respawning || GetComponent<Shuriken>()) return;
-            if (collision.collider.GetComponent<PlayerController>()) return;
-            HookableBody partner = collision.collider.GetComponent<HookableBody>();
-            if (partner && (partner.IsHooked || partner.GetComponent<Shuriken>())) return;
-            int key = partner ? partner.GetInstanceID() : collision.collider.GetInstanceID();
-            if (impactTimes.TryGetValue(key, out float last) && Time.time - last < 0.1f) return;
-            impactTimes[key] = Time.time;
-            // Both collision callbacks describe one impact, so record it on both bodies before damage.
-            if (partner) partner.impactTimes[GetInstanceID()] = Time.time;
-
-            float damage = (speed - 4.5f) * Body.mass * 2.4f;
-            ReceiveDamage(damage);
-            CameraShake.Pulse(Mathf.Clamp01(damage / 45f));
-
-            if (partner && partner != this)
-                partner.ReceiveDamage(damage * 0.75f);
-        }
+        private void OnCollisionEnter2D(Collision2D collision) => ResolveThrowImpact(collision.collider);
 
         private IEnumerator Flash()
         {
@@ -154,8 +151,7 @@ namespace FishingPrototype
         private IEnumerator Respawn()
         {
             respawning = true;
-            thrownUntil = float.NegativeInfinity;
-            impactTimes.Clear();
+            ClearThrow();
             SetHooked(false);
             foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = false;
             GetComponent<Collider2D>().enabled = false;

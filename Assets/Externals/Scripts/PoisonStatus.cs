@@ -3,12 +3,12 @@ namespace FishingPrototype
 {
     public sealed class PoisonStatus : MonoBehaviour
     {
-        public enum PlayerStatus { normal, poisoning }
+        public enum PlayerStatus { normal, poison }
         [UnityEngine.Serialization.FormerlySerializedAs("Until")]
         [Header("독 상태")]
         public float until;
-        public PlayerStatus status => Time.time < until ? PlayerStatus.poisoning : PlayerStatus.normal;
-        public float SpeedMultiplier => status == PlayerStatus.poisoning ? 1f - reduction : 1f;
+        public PlayerStatus status => Time.time < until ? PlayerStatus.poison : PlayerStatus.normal;
+        public float SpeedMultiplier => status == PlayerStatus.poison ? 1f - reduction : 1f;
         float nextTick, damage, interval, reduction;
         void Update() => Tick(Time.time);
         void Tick(float now)
@@ -18,14 +18,15 @@ namespace FishingPrototype
                 Mathf.CeilToInt((until - nextTick) / interval));
             nextTick += ticks * interval;
             // 같은 프레임에 밀린 틱은 합산하되, 만료 이후 피해는 포함하지 않습니다.
-            GetComponent<PlayerHealth>()?.ReceiveDamage(damage * ticks, Vector2.zero);
+            GetComponent<PlayerHealth>()?.ReceivePoisonDamage(damage * ticks);
         }
-        public void Apply(float poisonDuration = 2f, float damagePerTick = 3f, float damageTickInterval = 0.5f, float moveSpeedReduction = 0.4f)
+        public void Apply(float poisonDuration = 2f, float damagePerTick = 3f, float damageTickInterval = 0.5f, float moveSpeedReduction = 0.4f, bool refreshDurationOnContact = true)
         {
             Tick(Time.time);
             var player = GetComponent<PlayerController>();
-            if (player && player.ControlsLocked) return;
-            bool wasPoisoned = status == PlayerStatus.poisoning;
+            if (player && player.Body && !player.Body.simulated) return;
+            bool wasPoisoned = status == PlayerStatus.poison;
+            if (wasPoisoned && !refreshDurationOnContact) return;
             interval = Mathf.Max(0.01f, damageTickInterval);
             if (!wasPoisoned) nextTick = Time.time + interval;
             damage = Mathf.Max(0f, damagePerTick); reduction = Mathf.Clamp01(moveSpeedReduction);

@@ -4,6 +4,8 @@ namespace FishingPrototype
     public sealed class PoisonCloud : MonoBehaviour
     {
         float expires, nextTick;
+        public bool Paused { get; set; }
+        public void ExtendLifetime(float duration) { expires += duration; }
         [Header("독가스 효과")]
         public bool damagesEnemies;
         public float duration = 3f;
@@ -18,8 +20,6 @@ namespace FishingPrototype
         [Range(0, 1), Tooltip("기본 이동속도 감소 비율. 0.4는 40% 감소입니다.")]
         public float moveSpeedReduction = 0.4f;
         public bool refreshDurationOnContact = true;
-        private readonly System.Collections.Generic.HashSet<PoisonStatus> touching = new System.Collections.Generic.HashSet<PoisonStatus>();
-        private readonly System.Collections.Generic.HashSet<PoisonStatus> previous = new System.Collections.Generic.HashSet<PoisonStatus>();
         private Vector3[] smokePositions, smokeScales;
         private SpriteRenderer[] smokeRenderers;
         public void SetSprayShape(Vector2 origin, Vector2 direction, float length)
@@ -35,7 +35,7 @@ namespace FishingPrototype
             if (!prefab) throw new System.InvalidOperationException("독가스 프리팹이 연결되지 않았습니다.");
             return Instantiate(prefab, position, Quaternion.identity);
         }
-        void Update() { if (smokePositions != null) AnimateSmoke(); }
+        void Update() { if (!Paused && smokePositions != null) AnimateSmoke(); }
         void AnimateSmoke()
         {
             for (int i = 0; i < transform.childCount; i++)
@@ -68,6 +68,7 @@ namespace FishingPrototype
         }
         void FixedUpdate()
         {
+            if (Paused) return;
             if (Time.time >= expires) { Destroy(gameObject); return; }
             if (damagesEnemies)
             {
@@ -82,21 +83,19 @@ namespace FishingPrototype
                 }
                 return;
             }
-            touching.Clear();
             foreach (var col in Physics2D.OverlapBoxAll(transform.position, area, transform.eulerAngles.z))
             {
                 var bottle = col.GetComponent<PoisonBottle>();
                 if (bottle && bottle.GetComponent<HookableBody>().IsHooked && !bottle.Filled)
                 { bottle.Fill(); Destroy(gameObject); return; }
                 var player = col.GetComponent<PlayerController>();
-                if (player && !player.ControlsLocked && player.Body.simulated)
+                if (player && player.Body.simulated)
                 {
                     var status = player.GetComponent<PoisonStatus>();
-                    if (status && touching.Add(status) && (refreshDurationOnContact || !previous.Contains(status)))
-                        status.Apply(poisonDuration, damagePerTick, damageTickInterval, moveSpeedReduction);
+                    if (status)
+                        status.Apply(poisonDuration, damagePerTick, damageTickInterval, moveSpeedReduction, refreshDurationOnContact);
                 }
             }
-            previous.Clear(); previous.UnionWith(touching);
         }
     }
 }

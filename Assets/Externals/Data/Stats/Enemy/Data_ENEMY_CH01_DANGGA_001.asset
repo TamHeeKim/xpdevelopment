@@ -21,7 +21,29 @@ MonoBehaviour:
     moveSpeed: 5
     attackWidth: 0
     catchRange: 0
-    catchHold: 0.1
     chapter: 1
     faction: "\uC0AC\uCC9C\uB2F9\uAC00"
     sourceName: "\uB3C5\uAC00\uC2A4\uBCD1"
+    revisedCombat: 1
+    minAttackRange: 2
+    maxAttackRange: 10
+    minAttackTime: 0.35
+    maxAttackTime: 0.8
+    catchInputTimeout: 2
+    holdDistance: 2.5
+    holdHeight: 1
+    slamRange: 4
+    throwAngle: 60
+    throwRange: 10
+    jumpPower: 10.5
+    invulnTime: 0.5
+    hitLock: 0.15
+    hitStunTime: 0.18
+    detectionRange: 12
+    attackRange: 4
+    attackWindupTime: 0.6
+    attackRecoveryTime: 1.5
+    sprayDuration: 2
+    gasRange: 4
+    minKeepDistance: 3
+    maxKeepDistance: 5

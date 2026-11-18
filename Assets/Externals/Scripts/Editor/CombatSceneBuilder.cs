@@ -129,6 +129,7 @@ namespace FishingPrototype.Editor
         }
         static void AddBodyHud(GameObject owner)
         {
+            if (owner.GetComponent<Shuriken>()) return;
             var go=new GameObject("Canvas_BodyHud",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(owner.transform,false);
             go.transform.localPosition=new Vector3(0,0.75f,0);go.transform.localScale=new Vector3(0.01f/owner.transform.localScale.x,0.01f/owner.transform.localScale.y,0.01f);
             var canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=20;
@@ -137,14 +138,7 @@ namespace FishingPrototype.Editor
             var bg=Image(go.transform,"Image_HealthBackground",0,28,130,4,new Color(0.2f,0.1f,0.13f));
             var fill=Image(bg.transform,"Image_HealthFill",0,0,130,4,new Color(1f,0.43f,0.36f));Fill(fill);
             var hud=go.AddComponent<BodyHud>();hud.body=owner.GetComponent<HookableBody>();hud.canvas=canvas;hud.nameText=label;hud.healthFill=fill;
-            if(owner.GetComponent<Shuriken>())
-            {
-                rect.sizeDelta=new Vector2(36,36);
-                label.rectTransform.sizeDelta=bg.rectTransform.sizeDelta=new Vector2(36,36);
-                bg.rectTransform.anchoredPosition=Vector2.zero;
-                label.alignment=TextAnchor.MiddleCenter;label.fontSize=24;label.text=CombatText.Get("input.counter");
-                label.transform.SetAsLastSibling();
-            }
+
         }
 
         static void BuildLevel()

@@ -26,6 +26,12 @@ namespace FishingPrototype
         [Header("수리검 거리 유지 (경계 포함)")]
         [Min(0)] public float minKeepDistance = 3f;
         [Min(0)] public float maxKeepDistance = 5f;
+        [Header("피격 및 간격 유지 (임시값)")]
+        public float hitStunTime = 0.18f;
+        public float separationDistance = 1.2f, separationSpeed = 1.5f;
+        private float stunUntil, stunStarted;
+        private bool stunned;
+        public bool IsStunned => stunned;
         public ActionState State => state;
         HookableBody body;
         SpriteRenderer visual;
@@ -54,14 +60,23 @@ namespace FishingPrototype
         }
         void FixedUpdate()
         {
-            if (!body || !player || !body.Body.simulated || !player.Body.simulated || player.ControlsLocked || body.Health <= 0f)
+            ApplySheet();
+            if (!body || !player || !body.Body.simulated || !player.Body.simulated || body.Health <= 0f)
             { CancelAttack(); return; }
             if (body.IsHooked || body.IsThrown) { CancelAttack(); return; }
+            if (stunned)
+            {
+                Move(0);
+                if (Time.time < stunUntil) return;
+                until += Time.time - stunStarted;
+                if (spray) { spray.ExtendLifetime(Time.time - stunStarted); spray.Paused = false; }
+                stunned = false;
+            }
             Vector2 delta = player.Body.position - body.Body.position;
             float distance = delta.magnitude;
             if (!engaged)
             {
-                if (enemyType == EnemyType.Poison && distance > detectionRange) { Move(0); return; }
+                if (distance > (enemyType == EnemyType.Poison ? detectionRange : maxKeepDistance)) { Move(0); return; }
                 engaged = true;
             }
             if (state == ActionState.Windup)
@@ -93,8 +108,48 @@ namespace FishingPrototype
             FacePlayer();
             float movement = enemyType == EnemyType.Poison ? (distance > attackRange ? direction : 0f)
                 : distance < minKeepDistance ? -direction : distance > Mathf.Max(minKeepDistance, maxKeepDistance) ? direction : 0f;
-            if (movement != 0f) { state = ActionState.Moving; Move(movement * (body.statDefinition ? body.statDefinition.Values.moveSpeed : moveSpeed)); return; }
+            if (movement != 0f) { state = ActionState.Moving; MoveWithSeparation(movement * (body.statDefinition ? body.statDefinition.Values.moveSpeed : moveSpeed)); return; }
             Move(0); state = ActionState.Windup; until = Time.time + attackWindupTime;
+        }
+        void ApplySheet()
+        {
+            if (!body || !body.statDefinition || !body.statDefinition.Values.revisedCombat) return;
+            var v = body.statDefinition.Values;
+            detectionRange = v.detectionRange; attackRange = v.attackRange;
+            attackWindupTime = v.attackWindupTime; attackRecoveryTime = v.attackRecoveryTime;
+            sprayDuration = Mathf.Max(0.01f, v.sprayDuration); gasRange = Mathf.Max(0.01f, v.gasRange);
+            minKeepDistance = v.minKeepDistance; maxKeepDistance = v.maxKeepDistance; hitStunTime = v.hitStunTime;
+        }
+        public void Stun()
+        {
+            if (!body) body = GetComponent<HookableBody>();
+            ApplySheet();
+            if (stunned || body.Health <= 0 || body.IsHooked || body.IsThrown || hitStunTime <= 0) return;
+            stunned = true; stunStarted = Time.time; stunUntil = Time.time + hitStunTime;
+            Move(0);
+            if (spray) spray.Paused = true;
+        }
+        public void OnConnected()
+        {
+            if (!body) body = GetComponent<HookableBody>();
+            CancelAttack();
+            // 연결 후 취소된 적은 최초 감지 대신 현재 거리로 행동을 다시 판단합니다.
+            engaged = true;
+        }
+        void MoveWithSeparation(float speed)
+        {
+            float correction = 0;
+            var seen = new System.Collections.Generic.HashSet<HookableBody>();
+            foreach (var col in Physics2D.OverlapCircleAll(body.Body.position, separationDistance))
+            {
+                var other = col.GetComponentInParent<HookableBody>();
+                if (!other || other == body || !seen.Add(other) || other.kind != HookableBody.BodyKind.Enemy || other.IsHooked || other.IsThrown || other.Health <= 0) continue;
+                Vector2 offset = body.Body.position - other.Body.position;
+                if (Mathf.Abs(offset.y) > separationDistance * 0.75f) continue;
+                float sign = Mathf.Abs(offset.x) > 0.01f ? Mathf.Sign(offset.x) : (body.GetInstanceID() < other.GetInstanceID() ? -1 : 1);
+                correction += sign * Mathf.Clamp01(1 - offset.magnitude / Mathf.Max(0.01f, separationDistance));
+            }
+            Move(speed + Mathf.Clamp(correction, -1, 1) * separationSpeed);
         }
         void FacePlayer()
         {
@@ -142,7 +197,7 @@ namespace FishingPrototype
         }
         void CancelAttack()
         {
-            EndSpray(); ResetPose(); engaged = false; state = ActionState.Waiting;
+            EndSpray(); ResetPose(); stunned = false; state = ActionState.Waiting;
             if (visual && body) visual.color = body.baseColor;
         }
         void OnDisable() { if (body) CancelAttack(); }

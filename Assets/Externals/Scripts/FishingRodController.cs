@@ -7,7 +7,7 @@ namespace FishingPrototype
 {
     public sealed class FishingRodController : MonoBehaviour
     {
-        private enum RodState { Idle, Extending, Catching, Held, Slamming }
+        private enum RodState { Idle, Attacking, Extending, Catching, Pulling, Held, Slamming, Throwing }
         [Header("연결")]
         public PlayerController player;
         public Transform rodVisual;
@@ -15,7 +15,6 @@ namespace FishingPrototype
         [SerializeField] private Rigidbody2D tipBody;
         [SerializeField] private CircleCollider2D tipCollider;
         [SerializeField] private LineRenderer line, strikeLine, outline;
-        [SerializeField] private BoxCollider2D attackCollider;
         public AudioSource captureAudio;
         [Header("시트 열이 없을 때 기본값")]
         [Min(0)] public float attack = 10f;
@@ -28,31 +27,36 @@ namespace FishingPrototype
         [Min(0.1f)] public float throwSpeed = 12f;
         [Min(0.05f)] public float slamDuration = 0.4f;
         public float idleLength = 1.65f;
-        [Header("낚싯줄 물리")]
-        [Min(0.1f)] public float swingForce = 27f;
-        [Min(0)] public float holdDamping = 4f;
-        [Min(0.1f)] public float reelSpeed = 3.8f;
-        [Header("수리검 Q 반격")]
-        [Min(0)] public float shurikenCounterRange = 2.5f;
-        [Min(0)] public float shurikenCounterMotionTime = 0.3f;
-        private Shuriken counterStar;
-        public bool CanCounter => state == RodState.Idle && (!counterStar || !counterStar.IsCountering) && player && player.Body && player.Body.simulated && !player.ControlsLocked;
-        private const float baseHoldTime = 0.3f, attackDuration = 0.5f;
+        [Header("공격 거리와 전체 동작 시간 (임시값)")]
+        public float minAttackRange = 2f, maxAttackRange = 10f;
+        public float minAttackTime = 0.35f, maxAttackTime = 0.8f;
+        public float attackWindup = 0.1f;
+        [Header("연결·당기기·포획 위치 (임시값)")]
+        public float catchInputTimeout = 2f, holdDistance = 2.5f, holdHeight = 1f;
+        public float pullSpeed = 12f, slamRange = 4f, throwRecoveryTime = 0.2f;
+        [Header("일반 투척 피해 (기획 확정 전 임시값)")]
+        public float thrownSelfDamage = 12f, thrownHitDamage = 11f;
+        public float throwArcHeight = 0.7f;
+        private bool UsesSheet => statDefinition && statDefinition.Values.revisedCombat;
         public float Attack => statDefinition ? statDefinition.Values.attack : attack;
         public float AttackWidth => statDefinition && statDefinition.Values.attackWidth > 0 ? statDefinition.Values.attackWidth : attackWidth;
         public float CatchRange => statDefinition && statDefinition.Values.catchRange > 0 ? statDefinition.Values.catchRange : catchRange;
-        public float CaptureProgress => target && (state == RodState.Extending || state == RodState.Catching)
-            ? Mathf.Clamp01((Time.time - pressedAt) / (baseHoldTime + target.CatchHold)) : 0f;
+        private float HoldDistance => UsesSheet ? statDefinition.Values.holdDistance : holdDistance;
+        private float HoldHeight => UsesSheet ? statDefinition.Values.holdHeight : holdHeight;
+        private float SlamRange => UsesSheet ? statDefinition.Values.slamRange : slamRange;
+        private float CatchTimeout => UsesSheet ? statDefinition.Values.catchInputTimeout : catchInputTimeout;
+        public bool CapturePending => state == RodState.Extending || state == RodState.Catching || state == RodState.Pulling;
         public string HeldName => hooked ? hooked.DisplayName : "";
         public string EquipmentName => CombatText.Get("equipment.bobber");
         private RodState state;
         private HookableBody target, hooked, slamTarget;
-        private float pressedAt, attackUntil = float.NegativeInfinity, slamStarted, slamAttack;
+        private float connectedAt, attackUntil = float.NegativeInfinity, attackStarted, attackTotal, hitAt, slamStarted, slamAttack;
+        private bool attackApplied;
         private Vector2 tipPosition;
-        private Vector2 aim = Vector2.right, attackStart, attackEnd, slamStart, slamEnd;
-        private float ropeLength, desiredRopeLength, castStarted = float.NegativeInfinity, castSide = 1f;
-        private readonly HashSet<HookableBody> attackHits = new HashSet<HookableBody>();
+        private Vector2 aim = Vector2.right, attackStart, attackEnd, slamStart, slamEnd, holdOffset;
+        private float castStarted = float.NegativeInfinity, castSide = 1f;
         private RigidbodyType2D savedBodyType;
+        private float savedGravity;
         private bool bodyClaimed;
         private SpriteRenderer tipVisual;
         private float rodFacing = 1f;
@@ -61,7 +65,7 @@ namespace FishingPrototype
 
         private void Start()
         {
-            if (!player || !rodVisual || !tipBody || !attackCollider)
+            if (!player || !rodVisual || !tipBody)
                 throw new System.InvalidOperationException("플레이어 전투 프리팹 연결을 확인하세요.");
             rodPosition = rodVisual.localPosition; rodScale = rodVisual.localScale; rodAngles = rodVisual.localEulerAngles;
             tipVisual = tipBody.GetComponent<SpriteRenderer>();
@@ -70,49 +74,44 @@ namespace FishingPrototype
             tipBody.bodyType = RigidbodyType2D.Kinematic;
             tipBody.simulated = false;
             tipPosition = RodAnchor + aim * idleLength;
-            attackCollider.enabled = false;
         }
         private void Update()
         {
-            if (!player.Body || !player.Body.simulated || player.ControlsLocked) { Interrupt(); return; }
+            if (!player.Body || !player.Body.simulated) { Interrupt(); return; }
             UpdateRodVisual();
             Vector2 cursor = Camera.main ? (Vector2)Camera.main.ScreenToWorldPoint(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero) : RodAnchor + aim;
-            if ((cursor - (Vector2)player.transform.position).sqrMagnitude > 0.0001f) aim = (cursor - (Vector2)player.transform.position).normalized;
-            if (counterStar && counterStar.IsCountering) return;
-            if (Keyboard.current?.qKey.wasPressedThisFrame ?? false)
+            if ((cursor - player.Body.position).sqrMagnitude > 0.0001f) aim = (cursor - player.Body.position).normalized;
+            if (!player.ControlsLocked)
             {
-                if (state == RodState.Held) ThrowHeld(aim);
-                else if (TryCounter()) return;
+                if (Mouse.current?.leftButton.wasPressedThisFrame ?? false) BeginPress(cursor);
+                else if (Mouse.current?.rightButton.wasPressedThisFrame ?? false) BeginCapture(cursor);
             }
-            if (Mouse.current?.leftButton.wasPressedThisFrame ?? false) BeginPress(cursor);
-            if ((Mouse.current?.leftButton.wasReleasedThisFrame ?? false) && (state == RodState.Extending || state == RodState.Catching)) CancelCapture();
-            if (Keyboard.current?.eKey.wasPressedThisFrame ?? false) BeginSlam();
-            UpdateTargetOutline(state == RodState.Idle ? SelectCatchTarget(cursor) : target);
+            UpdateTargetOutline(state == RodState.Idle && !player.ControlsLocked ? SelectCatchTarget(cursor) : null);
         }
         private void FixedUpdate()
         {
-            if (!player.Body || !player.Body.simulated || player.ControlsLocked) return;
-            TickAttack();
-            if (state == RodState.Extending || state == RodState.Catching)
-                TickCapture(Mouse.current?.leftButton.isPressed ?? false);
+            if (!player.Body || !player.Body.simulated) return;
+            if (state == RodState.Attacking) TickAttack();
+            else if (CapturePending) TickCapture();
             else if (state == RodState.Held)
             {
                 if (!Alive(hooked)) { CancelCapture(); return; }
-                ropeLength = Mathf.MoveTowards(ropeLength, desiredRopeLength, reelSpeed * Time.fixedDeltaTime);
-                PullBody(hooked, (Vector2)player.transform.position + aim * ropeLength, swingForce, holdDamping);
-                Vector2 stretch = hooked.Body.position - (Vector2)player.transform.position;
-                if (stretch.magnitude > ropeLength)
-                    hooked.Body.AddForce(-stretch.normalized * (stretch.magnitude - ropeLength) * 95f * hooked.Body.mass);
+                MoveHeld(HoldPosition);
             }
             else if (state == RodState.Slamming) TickSlam();
-            else if (Time.time < attackUntil) UpdateCastTip(attackEnd);
+            else if (state == RodState.Throwing) { if (Time.time >= attackUntil) state = RodState.Idle; }
             else tipPosition = Vector2.Lerp(tipPosition, RodAnchor + aim * idleLength, 0.28f);
+        }
+        private Vector2 HoldPosition => player.Body.position + holdOffset;
+        private void MoveHeld(Vector2 position)
+        {
+            hooked.Body.linearVelocity = Vector2.zero;
+            hooked.Body.MovePosition(position);
         }
         private void LateUpdate()
         {
             if (tipBody) tipBody.transform.position = tipPosition;
             if (tipVisual) tipVisual.enabled = !bodyClaimed;
-            if (attackCollider && attackCollider.enabled) PositionAttackCollider();
             DrawLine();
         }
         private void UpdateRodVisual()
@@ -126,104 +125,162 @@ namespace FishingPrototype
 
         public HookableBody SelectCatchTarget(Vector2 cursor)
         {
-            HookableBody hovered = null, nearest = null, prop = null;
-            float hoveredDistance = float.PositiveInfinity, nearestDistance = float.PositiveInfinity, propDistance = float.PositiveInfinity;
-            foreach (var candidate in FindObjectsByType<HookableBody>(FindObjectsSortMode.None))
+            HookableBody best = null;
+            float bestDistance = float.PositiveInfinity, bestDepth = float.PositiveInfinity;
+            int bestLayer = int.MinValue, bestOrder = int.MinValue;
+            var seen = new HashSet<HookableBody>();
+            foreach (var col in Physics2D.OverlapCircleAll(player.Body.position, CatchRange))
             {
-                if (!Alive(candidate) || candidate.IsHooked) continue;
-                float distance = Vector2.Distance(player.transform.position, candidate.transform.position);
-                if (distance > CatchRange) continue;
-                if (candidate.kind == HookableBody.BodyKind.Enemy)
-                {
-                    if (distance < nearestDistance) { nearest = candidate; nearestDistance = distance; }
-                    if (candidate.targetingCollider && candidate.targetingCollider.OverlapPoint(cursor) && distance < hoveredDistance)
-                    { hovered = candidate; hoveredDistance = distance; }
-                }
-                else if (candidate.GetComponent<Collider2D>().OverlapPoint(cursor) && distance < propDistance)
-                { prop = candidate; propDistance = distance; }
+                var candidate = col.GetComponentInParent<HookableBody>();
+                if (!candidate || !seen.Add(candidate) || !Alive(candidate) || !candidate.canCatch || candidate.IsHooked) continue;
+                if (Vector2.Distance(player.Body.position, candidate.Body.position) > CatchRange) continue;
+                var shape = candidate.GetComponent<Collider2D>();
+                if (!shape || !shape.enabled) continue;
+                bool inside = shape.OverlapPoint(cursor);
+                if (!inside && !(candidate.targetingCollider && candidate.targetingCollider.OverlapPoint(cursor))) continue;
+                float distance = inside ? 0 : (shape.ClosestPoint(cursor) - cursor).sqrMagnitude;
+                var sprite = candidate.GetComponent<SpriteRenderer>();
+                int layer = sprite ? SortingLayer.GetLayerValueFromID(sprite.sortingLayerID) : 0;
+                int order = sprite ? sprite.sortingOrder : 0;
+                float depth = Camera.main ? Camera.main.WorldToViewportPoint(candidate.transform.position).z : candidate.transform.position.z;
+                bool front = layer > bestLayer || (layer == bestLayer && (order > bestOrder || (order == bestOrder && depth < bestDepth)));
+                if (distance < bestDistance - 0.00001f || (Mathf.Abs(distance - bestDistance) < 0.00001f && front))
+                { best = candidate; bestDistance = distance; bestLayer = layer; bestOrder = order; bestDepth = depth; }
             }
-            return hovered ? hovered : prop ? prop : nearest;
+            return best;
         }
         public void BeginPress(Vector2 cursor)
         {
+            if (player.ControlsLocked) return;
+            if (CapturePending) { CancelCapture(); return; }
+            if (state == RodState.Held)
+            {
+                if (hooked.GetComponent<Shuriken>()) ThrowHeld(cursor - player.Body.position);
+                else BeginSlam();
+            }
+            else if (state == RodState.Idle) BeginAttack(cursor);
+        }
+        public void BeginCapture(Vector2 cursor)
+        {
+            if (player.ControlsLocked) return;
+            if (state == RodState.Held) { ThrowHeld(cursor - player.Body.position); return; }
+            if (state == RodState.Catching) { state = RodState.Pulling; return; }
             if (state != RodState.Idle) return;
-            if (Time.time >= attackUntil) BeginAttack(cursor);
             target = SelectCatchTarget(cursor);
             if (!target) return;
-            pressedAt = Time.time;
+            holdOffset = new Vector2((target.Body.position.x >= player.Body.position.x ? 1 : -1) * HoldDistance, HoldHeight);
             castStarted = Time.time;
             state = RodState.Extending;
+            if (target.GetComponent<Shuriken>())
+            {
+                ClaimBody(target); CompleteCapture(); hooked.Body.position = HoldPosition;
+            }
+        }
+        public float AttackTimeForDistance(float distance)
+        {
+            float minRange = UsesSheet ? statDefinition.Values.minAttackRange : minAttackRange;
+            float maxRange = UsesSheet ? statDefinition.Values.maxAttackRange : maxAttackRange;
+            float minTime = UsesSheet ? statDefinition.Values.minAttackTime : minAttackTime;
+            float maxTime = UsesSheet ? statDefinition.Values.maxAttackTime : maxAttackTime;
+            return Mathf.Max(0.02f, Mathf.Lerp(minTime, maxTime, Mathf.InverseLerp(minRange, maxRange, distance)));
         }
         private void BeginAttack(Vector2 cursor)
         {
-            attackStart = RodAnchor; attackEnd = cursor; attackUntil = Time.time + attackDuration; attackHits.Clear();
-            castStarted = Time.time; castSide *= -1f;
-            Vector2 delta = attackEnd - attackStart;
-            PositionAttackCollider();
-            Vector3 scale = attackCollider.transform.lossyScale;
-            attackCollider.size = new Vector2(Mathf.Max(0.001f, delta.magnitude) / Mathf.Abs(scale.x), AttackWidth / Mathf.Abs(scale.y));
-            attackCollider.enabled = true;
-            TickAttack();
-        }
-        private void PositionAttackCollider()
-        {
-            Vector2 delta = attackEnd - attackStart;
-            attackCollider.transform.SetPositionAndRotation((attackStart + attackEnd) * 0.5f, Quaternion.Euler(0, 0, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg));
+            attackStart = RodAnchor;
+            Vector2 delta = cursor - attackStart;
+            Vector2 direction = delta.sqrMagnitude > 0.0001f ? delta.normalized : Vector2.right * rodFacing;
+            float minRange = UsesSheet ? statDefinition.Values.minAttackRange : minAttackRange;
+            float maxRange = UsesSheet ? statDefinition.Values.maxAttackRange : maxAttackRange;
+            float distance = Mathf.Clamp(delta.magnitude, Mathf.Max(0.01f, minRange), Mathf.Max(minRange, maxRange));
+            attackEnd = attackStart + direction * distance;
+            attackTotal = AttackTimeForDistance(distance); attackStarted = castStarted = Time.time;
+            float windup = Mathf.Min(attackWindup, (UsesSheet ? statDefinition.Values.minAttackTime : minAttackTime) * 0.5f);
+            hitAt = attackStarted + windup + (attackTotal - windup) * 0.55f;
+            attackUntil = attackStarted + attackTotal; attackApplied = false;
+            castSide *= -1f; state = RodState.Attacking;
         }
         private void TickAttack()
         {
-            if (Time.time >= attackUntil) { attackCollider.enabled = false; return; }
-            Vector2 delta = attackEnd - attackStart;
-            foreach (var col in Physics2D.OverlapBoxAll((attackStart + attackEnd) * 0.5f, new Vector2(Mathf.Max(0.001f, delta.magnitude), AttackWidth), Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg))
+            float windup = Mathf.Min(attackWindup, (UsesSheet ? statDefinition.Values.minAttackTime : minAttackTime) * 0.5f);
+            if (Time.time < hitAt)
             {
-                if (col.isTrigger) continue;
-                var body = col.GetComponent<HookableBody>();
-                if (Alive(body) && body.kind == HookableBody.BodyKind.Enemy && attackHits.Add(body)) body.ReceiveDamage(Attack);
+                float t = Mathf.Clamp01((Time.time - attackStarted - windup) / Mathf.Max(0.01f, hitAt - attackStarted - windup));
+                Vector2 delta = attackEnd - attackStart;
+                float angle = Mathf.Lerp(-95f * castSide, 0, Mathf.SmoothStep(0, 1, t)) * Mathf.Deg2Rad;
+                Vector2 d = delta.normalized;
+                tipPosition = attackStart + new Vector2(d.x * Mathf.Cos(angle) - d.y * Mathf.Sin(angle), d.x * Mathf.Sin(angle) + d.y * Mathf.Cos(angle)) * Mathf.Lerp(0.6f, delta.magnitude, t);
             }
+            else
+            {
+                if (!attackApplied)
+                {
+                    attackApplied = true;
+                    Vector2 delta = attackEnd - attackStart;
+                    var hits = new HashSet<HookableBody>();
+                    foreach (var col in Physics2D.OverlapCapsuleAll((attackStart + attackEnd) * 0.5f,
+                        new Vector2(delta.magnitude + AttackWidth, AttackWidth), CapsuleDirection2D.Horizontal, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg))
+                    {
+                        if (col.isTrigger) continue;
+                        var body = col.GetComponentInParent<HookableBody>();
+                        if (Alive(body) && body.kind == HookableBody.BodyKind.Enemy && hits.Add(body))
+                        { body.ReceiveDamage(Attack); body.GetComponent<TangEnemyAI>()?.Stun(); }
+                    }
+                }
+                tipPosition = Vector2.Lerp(attackEnd, RodAnchor + aim * idleLength, Mathf.InverseLerp(hitAt, attackUntil, Time.time));
+            }
+            if (Time.time >= attackUntil) state = RodState.Idle;
         }
-        private void TickCapture(bool held)
+        private void TickCapture()
         {
-            if (!held || !Alive(target) || Vector2.Distance(player.transform.position, target.transform.position) > CatchRange)
-            { CancelCapture(); return; }
+            if (!Alive(target) || !OnScreen(target)) { CancelCapture(); return; }
             if (state == RodState.Extending)
             {
                 UpdateCastTip(target.Body.position);
                 if (Vector2.Distance(tipPosition, target.Body.position) > 0.02f) return;
-                ClaimBody(target); state = RodState.Catching;
+                ClaimBody(target); state = RodState.Catching; connectedAt = Time.time;
             }
-            if (Time.time - pressedAt >= baseHoldTime + target.CatchHold) CompleteCapture();
+            if (state == RodState.Catching)
+            {
+                if (Time.time - connectedAt >= CatchTimeout) CancelCapture();
+            }
+            else if (state == RodState.Pulling)
+            {
+                Vector2 next = Vector2.MoveTowards(target.Body.position, HoldPosition, Mathf.Max(0.1f, pullSpeed) * Time.fixedDeltaTime);
+                target.Body.MovePosition(next);
+                if (Vector2.Distance(next, HoldPosition) < 0.02f) CompleteCapture();
+            }
+        }
+        private static bool OnScreen(HookableBody body)
+        {
+            if (!Camera.main) return true;
+            var p = Camera.main.WorldToViewportPoint(body.Body.position);
+            return p.z > 0 && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
         }
         private void ClaimBody(HookableBody body)
         {
-            savedBodyType = body.Body.bodyType; bodyClaimed = true;
-            body.SetHooked(true);
-            body.HeldContact += OnHeldContact;
+            savedBodyType = body.Body.bodyType; savedGravity = body.Body.gravityScale; bodyClaimed = true;
+            body.SetHooked(true); body.Body.bodyType = RigidbodyType2D.Kinematic;
+            body.Body.linearVelocity = Vector2.zero; body.Body.angularVelocity = 0;
         }
         private void CompleteCapture()
         {
-            hooked = target;
-            RestoreHoldDistance(); state = RodState.Held;
+            hooked = target; state = RodState.Held;
             if (captureAudio) captureAudio.Play();
-        }
-        private void RestoreHoldDistance()
-        {
-            ropeLength = Vector2.Distance(player.transform.position, hooked.Body.position);
-            desiredRopeLength = CatchRange * 0.5f;
         }
         private void CancelCapture()
         {
-            if (bodyClaimed && target)
+            if (bodyClaimed && target && target.Body)
             {
-                target.HeldContact -= OnHeldContact;
-                target.Body.bodyType = savedBodyType;
+                target.Body.bodyType = savedBodyType; target.Body.gravityScale = savedGravity;
                 target.SetHooked(false); target.ClearThrow();
             }
             bodyClaimed = false; hooked = target = slamTarget = null; state = RodState.Idle;
         }
+        public void OnPhysicalHit() { if (CapturePending) CancelCapture(); }
         public void BeginSlam()
         {
-            if (state != RodState.Held || !Alive(hooked)) return;
-            float range = CatchRange * 2f / 3f;
+            if (state != RodState.Held || !Alive(hooked) || !player.Grounded || hooked.GetComponent<Shuriken>()) return;
+            float range = SlamRange;
             slamTarget = null; float closest = range;
             foreach (var candidate in FindObjectsByType<HookableBody>(FindObjectsSortMode.None))
             {
@@ -250,7 +307,7 @@ namespace FishingPrototype
             float t = Mathf.Clamp01(elapsed / Mathf.Max(0.05f, slamDuration));
             Vector2 origin = player.transform.position;
             Vector2 destination = slamEnd - origin;
-            float radius = CatchRange * 2f / 3f;
+            float radius = SlamRange;
             Vector2 desired;
             if (t < 0.25f) desired = Vector2.Lerp(slamStart, origin + Vector2.up * radius, t * 4f);
             else
@@ -260,24 +317,18 @@ namespace FishingPrototype
                 float length = Mathf.Lerp(radius, destination.magnitude, progress);
                 desired = origin + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * length;
             }
-            PullBody(hooked, desired, swingForce * 3f, holdDamping * 2f);
-            // 충돌하지 않은 빗나간 내려찍기는 피해 없이 일반 포획으로 돌아간다.
-            if (elapsed > slamDuration + 1f) { RestoreHoldDistance(); state = RodState.Held; slamTarget = null; }
-        }
-        private void PullBody(HookableBody body, Vector2 desired, float stiffness, float damping)
-        {
-            Vector2 offset = desired - body.Body.position;
-            Vector2 relativeVelocity = body.Body.linearVelocity - player.Body.linearVelocity;
-            body.Body.AddForce((offset * stiffness - relativeVelocity * damping) * body.Body.mass);
-            player.Body.AddForce(-offset * 0.08f);
-        }
-        private void OnHeldContact(Collider2D collider)
-        {
-            if (state != RodState.Slamming || !Alive(hooked) || Time.time - slamStarted < slamDuration * 0.5f || hooked.Body.linearVelocity.y > 0.5f) return;
-            if (collider.isTrigger || collider.GetComponent<PlayerController>()) return;
-            var victim = collider.GetComponent<HookableBody>();
-            if (victim && (victim == hooked || victim.kind != HookableBody.BodyKind.Enemy || !Alive(victim))) return;
-            FinishSlam(victim);
+            MoveHeld(desired);
+            if (t < 0.5f) return;
+            var shape = hooked.GetComponent<Collider2D>();
+            foreach (var col in Physics2D.OverlapBoxAll(desired, shape.bounds.size, 0))
+            {
+                if (col.isTrigger) continue;
+                var victim = col.GetComponentInParent<HookableBody>();
+                if (victim && victim != hooked && Alive(victim) && victim.kind == HookableBody.BodyKind.Enemy)
+                { FinishSlam(victim); return; }
+            }
+            // 부채꼴의 착지 시점에 바닥 타격을 확정해 벽·천장 접촉과 구분합니다.
+            if (t >= 1f) FinishSlam(null);
         }
         private void FinishSlam(HookableBody victim)
         {
@@ -287,9 +338,10 @@ namespace FishingPrototype
             if (Alive(victim)) victim.ReceiveDamage(slamAttack * 1.1f);
             if (held.kind == HookableBody.BodyKind.Enemy) held.ReceiveDamage(slamAttack * 1.2f);
             if (!Alive(held)) { CancelCapture(); return; }
-            RestoreHoldDistance(); slamTarget = null;
+            if (held.kind == HookableBody.BodyKind.Prop && held.breakOnSlam) { CancelCapture(); Destroy(held.gameObject); return; }
+            hooked.Body.position = HoldPosition; slamTarget = null;
         }
-        public Vector2 SelectThrowDirection(Vector2 direction)
+        private HookableBody SelectThrowTarget(Vector2 direction)
         {
             direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right * rodFacing;
             HookableBody best = null; float bestAngle = float.PositiveInfinity, bestDistance = float.PositiveInfinity;
@@ -298,48 +350,54 @@ namespace FishingPrototype
                 if (candidate == hooked || !Alive(candidate) || candidate.kind != HookableBody.BodyKind.Enemy) continue;
                 Vector2 offset = (Vector2)candidate.transform.position - (Vector2)player.transform.position;
                 float distance = offset.magnitude;
-                if (distance < 0.001f || distance > throwRange) continue;
+                if (distance < 0.001f || distance > (UsesSheet ? statDefinition.Values.throwRange : throwRange)) continue;
                 float angle = Vector2.Angle(direction, offset);
-                if (angle > throwAngle * 0.5f + 0.001f) continue;
+                if (angle > (UsesSheet ? statDefinition.Values.throwAngle : throwAngle) * 0.5f + 0.001f) continue;
                 if (angle < bestAngle - 0.001f || (Mathf.Abs(angle - bestAngle) <= 0.001f && distance < bestDistance))
                 { best = candidate; bestAngle = angle; bestDistance = distance; }
             }
-            if (!best) return direction;
-            Vector2 launchPosition = hooked ? hooked.Body.position : (Vector2)player.transform.position;
-            Vector2 toTarget = (Vector2)best.transform.position - launchPosition;
-            return toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : direction;
+            return best;
+        }
+        public Vector2 SelectThrowDirection(Vector2 direction)
+        {
+            var best = SelectThrowTarget(direction);
+            Vector2 origin = hooked ? hooked.Body.position : player.Body.position;
+            return best ? (best.Body.position - origin).normalized : direction.normalized;
         }
         public void ThrowHeld(Vector2 direction)
         {
             if (state != RodState.Held || !Alive(hooked)) return;
-            Vector2 velocity = SelectThrowDirection(direction);
+            if (direction.sqrMagnitude < 0.0001f) direction = Vector2.right * rodFacing;
+            var best = SelectThrowTarget(direction);
             var released = hooked; var star = released.GetComponent<Shuriken>();
-            float speed = star ? star.flySpeed * 2f : Mathf.Max(throwSpeed, released.Body.linearVelocity.magnitude);
-            released.HeldContact -= OnHeldContact;
-            released.Body.bodyType = savedBodyType; released.SetHooked(false);
-            tipPosition = released.Body.position;
-            released.Body.linearVelocity = velocity * speed;
-            bodyClaimed = false; hooked = target = null; state = RodState.Idle;
-        }
-        public bool TryCounter()
-        {
-            if (!CanCounter) return false;
-            Shuriken nearest = null; float distance = float.PositiveInfinity;
-            foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None))
+            Vector2 velocity;
+            if (star) velocity = SelectThrowDirection(direction) * star.flySpeed * 2f;
+            else if (best)
             {
-                if (!star.CounterAvailable) continue;
-                float candidateDistance = (star.GetComponent<Rigidbody2D>().position - player.Body.position).sqrMagnitude;
-                if (candidateDistance < distance) { nearest = star; distance = candidateDistance; }
+                Vector2 offset = best.Body.position - released.Body.position;
+                float gravity = Mathf.Abs(Physics2D.gravity.y * savedGravity);
+                float time = Mathf.Max(0.1f, offset.magnitude / Mathf.Max(0.1f, throwSpeed));
+                // 가로 속도를 유지하되 위쪽 목표는 낮은 포물선의 정점 높이를 확보합니다.
+                if (gravity > 0.01f)
+                {
+                    float apex = Mathf.Max(0, offset.y) + throwArcHeight;
+                    time = Mathf.Sqrt(2 * apex / gravity) + Mathf.Sqrt(2 * Mathf.Max(0, apex - offset.y) / gravity);
+                }
+                velocity = new Vector2(offset.x / time, offset.y / time + gravity * time * 0.5f);
             }
-            if (!nearest || !nearest.BeginCounter(player, shurikenCounterMotionTime)) return false;
-            counterStar = nearest;
-            return true;
+            else velocity = direction.normalized * throwSpeed;
+            released.Body.bodyType = savedBodyType; released.Body.gravityScale = savedGravity;
+            released.SetHooked(false);
+            released.BeginThrow(thrownSelfDamage, thrownHitDamage);
+            released.Body.linearVelocity = velocity;
+            if (star) star.OnThrown();
+            tipPosition = released.Body.position;
+            bodyClaimed = false; hooked = target = null; state = RodState.Throwing;
+            attackUntil = Time.time + throwRecoveryTime;
         }
         public void Interrupt()
         {
-            if (counterStar) counterStar.CancelCounter();
             CancelCapture(); attackUntil = float.NegativeInfinity;
-            if (attackCollider) attackCollider.enabled = false;
         }
         private void OnDisable() { Interrupt(); }
         private void UpdateTargetOutline(HookableBody body)
@@ -368,7 +426,7 @@ namespace FishingPrototype
             Vector2 end = bodyClaimed && target ? (Vector2)target.transform.position : tipPosition;
             Vector2 start = RodAnchor;
             float distance = Vector2.Distance(start, end);
-            float slack = hooked ? Mathf.Max(0f, ropeLength - distance) : 0.1f;
+            float slack = 0.1f;
             Vector2 control = (start + end) * 0.5f + Vector2.down * (0.08f + slack * 0.35f);
             if (!bodyClaimed && Time.time - castStarted < 0.42f)
             {

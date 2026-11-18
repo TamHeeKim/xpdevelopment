@@ -17,7 +17,7 @@ Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 �
 처음 복제한 뒤 `git config core.hooksPath .githooks`를 실행합니다.
 검사 메뉴: `낚싯대 전투 > 검사 실행`.
 플레이어 공격/포획은 스탯 SO를 읽으며, 표시 문구는 Data_CombatText.csv에서 관리합니다.
-조작: A/D 이동, 스페이스바 점프, 좌클릭 공격·유지 포획, E 내려찍기, Q 투척, F 저장·회복.
+조작: A/D 이동, W 점프, 좌클릭 채찍, 우클릭 연결 → 다시 우클릭 당기기, 포획 후 좌클릭 지상 내려찍기 / 우클릭 투척, F 저장·회복.
 
 ## 에셋 폴더
 
@@ -33,35 +33,48 @@ Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 �
 `.meta` 파일을 함께 이동해 GUID를 유지합니다. `Resources` 내부 파일 이름은 런타임 로딩 키이므로 변경하지 않습니다.
 
 
-## 사천당가 적 기획 적용
+## 2026-11-18 개정 전투 기획
 
-`feature/enemy`는 `feature/player`의 작업 상태에서 분기했습니다. 기존 player → develop PR은 별도로 유지합니다.
+- [플레이어 기획서](https://app.notion.com/p/41b52b58f2b0801bb486c50ed70cc4bf)
+- [사천당가 적 기획서](https://app.notion.com/p/41b52b58f2b08078b81fde508a85ed7e)
 
-- `Prefab_PoisonEnemy`: 감지 → 공격 범위까지 추적 → 제자리 준비 → 전방 독가스 분사 → 회복 대기. 분사 시작부터 gasRange 전체에 판정을 적용하고, 범위 안의 연기만 앞으로 흐릅니다. 준비 중과 발사 직전에 플레이어 쪽으로 외형·공격 지점을 맞추고, 독가스 분사가 시작된 뒤에는 방향을 고정합니다.
-- `Prefab_ShurikenEnemy`: 최소·최대 거리 경계를 포함해 공격하며, 가까우면 후퇴하고 멀면 접근합니다. 준비가 끝나는 시점의 플레이어 위치로 수리검을 던집니다.
-- 두 적의 `Point_AttackOrigin`에서 공격하며, `attackVisual`의 들어 올리기·회전과 노란색 점멸로 준비를 표시합니다. 현재 적 외형은 기존 스프라이트를 재사용합니다.
-- 독가스병은 최초 detectionRange 진입 후 행동을 지속하며, 수리검병은 거리 유지 조건으로 즉시 행동합니다. 포획·투척·죽음은 준비/분사를 중단합니다.
-- 수리검은 중력 없이 직진하고 적 수리검은 다른 적/일반 오브젝트를 통과합니다. 화면 밖으로 나가면 제거합니다.
-- 손이 비어 있고 수리검 위 Q 배지가 보일 때 Q를 누르면 가까운 수리검 하나를 잡아 반격합니다. 잡는 순간 청록색, 되던지는 순간 자홍색으로 표시합니다. 모션 종료 후 발사한 적을 향해 flySpeed × 1.5, attackDamage × 2로 되던집니다. 발사자가 사라졌으면 가장 가까운 살아 있는 적, 적이 없으면 들어온 반대 방향을 사용합니다.
-- 이미 잡은 대상이 있으면 Q는 기존 투척을 우선합니다. 좌클릭으로 잡은 수리검의 기존 수동 투척(속도 2배, 피해 1.5배)은 유지합니다.
-- 독가스 접촉 시 PoisonStatus.status는 poisoning, 만료 시 normal입니다. 접촉 갱신은 피해 틱을 초기화하지 않습니다. refreshDurationOnContact가 꺼져 있으면 같은 가스 안에 머무는 동안 다시 적용하지 않고, 벗어났다가 재진입할 때 갱신합니다.
-- 기존 호리병의 독 흡수·보라색 반격 연기 기능은 유지합니다. 사천당가 보스는 행동 기획이 없어 구현하지 않았습니다.
+### 플레이어
 
-### 임시 밸런스 값과 편집 위치
+기본 채찍은 최소·최대 거리로 전개 거리를 제한하고, 거리 비율로 전체 공격 시간을 보간합니다. 준비 시간은 고정이며 전개·회수 시간이 변합니다. 완전 전개 시 낚싯줄 전체의 캡슐 영역을 한 번 검사합니다. 타격 후 들어온 적은 맞지 않으며 연속 클릭으로 공격이 초기화되지 않습니다. 공격 종료 전에는 다른 낚싯대 기술을 시작할 수 없습니다.
 
-기획에 숫자가 없던 항목은 아래 기본값으로 두었습니다. 새 행동 수치는 프리팹 인스펙터에 있으며 원본 스프레드시트는 수정하지 않았습니다.
+포획은 우클릭 연결 → 새 우클릭으로 당기기 → 기본 포획 위치 도착 순서입니다. 홀드 시간과 진행도 게이지는 없습니다. 최초 catchRange 내에서 커서가 본체/타겟팅 콜라이더 안에 있는 대상만 선택합니다. 본체까지 최단 거리를 비교하고, 겹친 본체는 SpriteRenderer의 정렬 레이어·순서와 카메라 깊이를 비교합니다. 현재 직교 2D 카메라 기준이며 향후 원근 2.5D 전환 시 화면 공간 투영 판정을 조정해야 합니다.
 
-| 위치 | 값 |
+포획 완료 전 좌클릭, 연결 후 입력 시간 초과, 화면 이탈, 물리 피격, 대상 제거 시 취소합니다. 연결 후 catchRange 이탈은 취소하지 않습니다. 이동·점프·독 피해는 취소하지 않으며, 완료된 포획은 물리 피격에도 유지합니다. 취소 클릭은 기본 공격을 동시에 발생시키지 않습니다.
+
+포획 대상은 holdDistance/holdHeight의 상대 위치를 유지합니다. 바라보는 방향 변경 시 반전하지 않습니다. 내려찍기는 지상 좌클릭이며 주변 적만 slamRange로 보정합니다. 잡힌 적 120%, 맞은 적 110% 피해 후 살아 있으면 기본 포획 위치로 돌아옵니다. 수리검은 내려찍기 대상이 아닙니다.
+
+우클릭 투척은 낮은 포물선으로 목표 위치를 보정합니다. 최초 적/지형 충돌만 피해를 주며 살아 있는 적은 착지 후 행동을 재개합니다. 오브젝트는 canCatch/breakOnSlam/breakOnThrow로 설정하고 체력으로 파괴하지 않습니다. 기존 독가스 호리병의 흡수·보라색 반격 연기와 사용 후 소멸은 유지합니다.
+
+수리검은 커서 타겟팅 후 우클릭 한 번으로 즉시 포획합니다. 이후 새 좌클릭 또는 우클릭으로 속도 2배, 피해 1.5배로 던집니다. Q 자동 반격과 Q 배지는 제거했습니다.
+
+### 적과 중독
+
+독가스병은 detectionRange 진입 후 추적 → 준비 → 고정 방향 분사 → 대기를 반복합니다. 수리검병은 최초 maxKeepDistance 진입 전 대기하고, 이후 최소·최대 거리 사이를 유지합니다. 준비 이후 범위를 벗어나도 공격을 계속하며 수리검은 발사 순간의 위치를 조준합니다.
+
+기본 채찍 피격은 hitStunTime 동안 행동과 시간 진행을 보존하여 정지합니다. 추가 피격은 경직을 연장하지 않고 넉백도 없습니다. 낚싯줄 연결은 행동을 초기화하고 독가스 분사를 중단합니다. 이미 발사된 수리검과 적용된 중독은 유지합니다. 적 간격 조정은 일반 이동 중에만 적용합니다.
+
+중독 상태는 poison/normal입니다. 중독 피해는 일반 피격 무적·hitLock을 발생시키거나 영향을 받지 않습니다. 감속은 moveSpeed × (1 - moveSpeedReduction)이며 중첩하지 않습니다. refreshDurationOnContact가 false면 중독 중 재접촉해도 갱신하지 않습니다. 만료 후 계속 접촉하면 새 중독을 적용합니다. 프레임 지연 시 만료 전 틱을 합산합니다.
+
+### 데이터와 임시값
+
+플레이어 및 적의 CombatStatDefinition을 기존 시트 가져오기에서 갱신합니다. 새 열이 없는 기존 시트도 명시적인 임시 기본값으로 읽습니다. hp/attack/defense/moveSpeed 및 원래 값은 보존하며 방어력 피해 공식은 기획 미정이라 적용하지 않습니다. SO가 연결된 새 필드는 SO 값이 인스펙터 기본값보다 우선합니다.
+
+| 위치 | 추가 필드와 임시 기본값 |
 | --- | --- |
-| 적 TangEnemyAI | detectionRange 12, attackWindupTime 0.6초, attackRecoveryTime 1.5초 |
-| 독가스병 TangEnemyAI | attackRange 4, sprayDuration 2초, gasRange 4 |
-| 수리검병 TangEnemyAI | minKeepDistance 3, maxKeepDistance 5 |
-| EnemyPoison의 PoisonCloud | poisonDuration 2초, damageTickInterval 0.5초, damagePerTick 3, moveSpeedReduction 0.4(40%), refreshDurationOnContact 켬 |
-| Shuriken | flySpeed 7, damage 12, attackDamage 12(수리검 반격 피해 기준) |
-| Player의 FishingRodController | shurikenCounterRange 2.5, shurikenCounterMotionTime 0.3초 |
+| 플레이어 SO | minAttackRange 2, maxAttackRange 10, minAttackTime 0.35초, maxAttackTime 0.8초 |
+| 플레이어 SO | catchInputTimeout 2초, holdDistance 2.5, holdHeight 1, slamRange 4, throwAngle 60, throwRange 10 |
+| 플레이어 SO | jumpPower 10.5, invulnTime 0.5초, hitLock 0.15초 |
+| 적 SO | hitStunTime 0.18초, detectionRange 12, attackRange 4, attackWindupTime 0.6초, attackRecoveryTime 1.5초, sprayDuration 2초, gasRange 4, minKeepDistance 3, maxKeepDistance 5 |
+| 낚싯대 프리팹 | lineSpeed 24, pullSpeed 12, throwSpeed 12, throwArcHeight 0.7, throwRecoveryTime 0.2초, thrownSelfDamage 12, thrownHitDamage 11 |
+| 적 프리팹 | separationDistance 1.2, separationSpeed 1.5 |
+| 독가스 프리팹 | damagePerTick 4, damageTickInterval 0.5초, poisonDuration 4초, moveSpeedReduction 0.4, refreshDurationOnContact 켬 |
+| 수리검 프리팹 | attackDamage 20, flySpeed 10 |
 
-적 체력(생성 시)·이동속도·추가 포획 시간은 각각 연결된 SO를 사용합니다. 독가스병은 ENEMY_CH01_DANGGA_001, 수리검병은 ENEMY_CH01_DANGGA_002입니다. 새 행동 수치를 시트로 옮길 때 위 필드 이름과 비율 단위를 기준으로 연결하면 됩니다.
+holdDistance/slamRange는 catchRange와 독립적입니다. catchHold, shurikenCounterRange, shurikenCounterMotionTime은 더 이상 사용하지 않습니다. 독가스·수리검·오브젝트의 별도 테이블 가져오기는 데이터 담당자가 기존 프리팹 필드와 연결할 수 있도록 유지했습니다. 원본 온라인 시트는 수정하지 않았습니다.
 
-적 체력은 추가 배율 없이 SO 값을 그대로 사용합니다. 현재 독가스병 75, 수리검병 80입니다. 독가스의 사각형 배경 표시는 끄고 연기 파츠만 표시합니다.
-
-중독 피해는 프레임이 지연돼도 만료 전까지 도래한 틱을 합산합니다. 접촉 갱신 전의 밀린 틱은 기존 피해값으로 처리하며 이미 적용한 틱은 반복하지 않습니다.
+미정인 기술 장착 UI, 추가 기술, 회피, 보스, 방어력 공식은 구현 범위에서 제외합니다. 기존 Build.zip은 이번 소스 변경과 별개인 이전 빌드입니다.

@@ -46,16 +46,19 @@ namespace FishingPrototype.Editor
             go.AddComponent<SpriteRenderer>();
             go.AddComponent<BoxCollider2D>();
             var target = go.AddComponent<HookableBody>();
+            typeof(HookableBody).GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(target, null);
             target.SetHooked(false);
             if (target.IsThrown) throw new Exception("Uncaptured body must not become a projectile");
             target.SetHooked(true);
             if (!target.IsHooked) throw new Exception("Capture state failed");
             target.SetHooked(false);
             if (target.IsHooked) throw new Exception("Release state failed");
-            if (!target.IsThrown) throw new Exception("Released target must retain impact damage");
+            if (target.IsThrown) throw new Exception("해제만으로 투척 판정이 발생하면 안 된다.");
+            target.BeginThrow(12, 11);
+            if (!target.IsThrown) throw new Exception("투척 시작 상태 누락");
             target.SetHooked(true);
             if (target.IsThrown) throw new Exception("Recapture must clear thrown state");
-            target.throwDamageDuration = 0f;
+            target.ClearThrow();
             target.SetHooked(false);
             if (target.IsThrown) throw new Exception("Expired throw must not deal impact damage");
             CombatShapes.DressEnemy(go, true);
@@ -71,8 +74,8 @@ namespace FishingPrototype.Editor
             target.Configure(HookableBody.BodyKind.Prop, Color.green, 100f, false);
             target.ReceiveDamage(10000f);
             if (target.HealthFraction != 1f) throw new Exception("일반 오브젝트는 피해로 파괴되지 않아야 한다");
-            target.throwDamageDuration = 2f;
-            target.SetHooked(true); target.SetHooked(false);
+
+            target.SetHooked(true); target.SetHooked(false); target.BeginThrow(12, 11);
             typeof(HookableBody).GetField("<Body>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(target, go.GetComponent<Rigidbody2D>());
             target.Body.position = new Vector2(20f, -20f);
             target.Body.linearVelocity = Vector2.down * 10f;
