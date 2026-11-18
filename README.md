@@ -78,3 +78,12 @@ Unity Hub에서 이 폴더를 열고 `낚싯대 전투 > 전투 씬 열기`를 �
 holdDistance/slamRange는 catchRange와 독립적입니다. catchHold, shurikenCounterRange, shurikenCounterMotionTime은 더 이상 사용하지 않습니다. 독가스·수리검·오브젝트의 별도 테이블 가져오기는 데이터 담당자가 기존 프리팹 필드와 연결할 수 있도록 유지했습니다. 원본 온라인 시트는 수정하지 않았습니다.
 
 미정인 기술 장착 UI, 추가 기술, 회피, 보스, 방어력 공식은 구현 범위에서 제외합니다. 기존 Build.zip은 이번 소스 변경과 별개인 이전 빌드입니다.
+
+
+## WF 아트와 ProPixelizer
+
+- 아트 패키지: `Assets/Externals/Models/WF` (원본 GUID 유지).
+- 데모 씬: `Assets/Externals/Models/WF/WF.unity`. 기존 전투 씬의 플레이어/적 모델 교체는 별도 작업입니다.
+- ProPixelizer 2.0.3: `WF/Addon/ProPixelizer`. 외부 패키지 내부 구조는 유지하고 Utils.PackageLocation만 배치 경로에 맞췄습니다.
+- `Assets/Settings/PC_Renderer.asset`의 SSAO 다음에 ProPixelizer Render Feature 등록. PC_RPAsset의 MSAA 비활성, Depth Priming 비활성, Render Graph 활성 설정을 사용합니다. Mobile 렌더러에는 적용하지 않았습니다.
+- 픽셀 효과는 제공된 ProPixelizer 머티리얼/카메라 설정을 사용합니다. 기능 등록만으로 기존 게임의 모델이나 애니메이션이 교체되지는 않습니다.

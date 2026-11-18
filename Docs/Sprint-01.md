@@ -125,3 +125,11 @@
 - 검증 환경은 동일 게임 필수 패키지를 사용하며 부가 AI·서비스 에디터 패키지는 제외했다. 원본 프로젝트의 Packages/Settings는 변경하지 않았다. 기존 SearchDatabase 에디터 예외는 Play 진입 시 남아 있으나 전투 검사는 통과했다.
 - 로그: combat-revision-final-build.log, combat-revision-play-6.log, combat-revision-final-checks-2.log. Build.zip은 갱신하지 않음.
 - 수동 타격감·애니메이션 품질 및 온라인 시트 실시간 연동은 이번 검증에 포함하지 않음.
+
+
+## 2026-11-19 WF 아트 패키지 적용
+
+- WF.unitypackage를 Externals/Models/WF로 가져오고 GUID와 머티리얼 참조 유지. ProPixelizer 2.0.3 및 PC 렌더러 기능 등록.
+- 검증: 별도 Unity 6000.3.11f1 프로젝트에서 임포트/C# 컴파일 통과. 그래픽 장치를 사용한 WF 데모 및 기존 전투 씬의 카메라 렌더 호출 통과, Shader error/Exception 없음. WF 결과 이미지에서 픽셀 렌더링 확인.
+- 로그: pixelizer-import.log, pixelizer-render-final.log (로컬 임시 검증 프로젝트).
+- 전투 씬 렌더 검사는 에디터 상태의 카메라 호출이며 Play 초기화/수동 게임 조작 검사는 미실시. 모바일 및 플레이어 빌드는 이번에 검증하지 않음. 기존 모델/전투 동작은 변경하지 않음.
