@@ -14,7 +14,7 @@ namespace FishingPrototype.Editor
         private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
         private static HookableBody Enemy(Transform root, Vector2 position)
         {
-            var go = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("NormalEnemy"), root);
+            var go = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab("PoisonEnemy"), root);
             go.transform.position = position;
             var body = go.GetComponent<HookableBody>(); Call(body, "Awake"); body.Configure(HookableBody.BodyKind.Enemy, Color.white, 100f, false); body.Body.gravityScale = 0;
             return body;

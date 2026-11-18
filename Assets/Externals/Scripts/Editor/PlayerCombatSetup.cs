@@ -12,14 +12,14 @@ namespace FishingPrototype.Editor
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("플레이를 종료한 뒤 프리팹을 연결하세요.");
             UpgradePlayer();
-            foreach (string name in new[] { "NormalEnemy", "HeavyEnemy" })
+            foreach (string name in new[] { "PoisonEnemy", "ShurikenEnemy" })
             {
                 string path = "Assets/Externals/Prefabs/Prefab_" + name + ".prefab";
                 var root = PrefabUtility.LoadPrefabContents(path);
                 try
                 {
                     var body = root.GetComponent<HookableBody>();
-                    body.statDefinition = AssetDatabase.LoadAssetAtPath<CombatStatDefinition>("Assets/Externals/Data/Stats/Enemy/Data_ENEMY_CH01_DANGGA_001.asset");
+                    body.statDefinition = AssetDatabase.LoadAssetAtPath<CombatStatDefinition>("Assets/Externals/Data/Stats/Enemy/Data_ENEMY_CH01_DANGGA_" + (name == "PoisonEnemy" ? "001" : "002") + ".asset");
                     if (!body.targetingCollider)
                     {
                         var area = new GameObject("Collider_CatchTarget"); area.transform.SetParent(root.transform, false);

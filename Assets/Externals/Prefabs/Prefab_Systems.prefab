@@ -71,8 +71,8 @@ MonoBehaviour:
   firstRightSpawn: {fileID: 0}
   secondLeftSpawn: {fileID: 0}
   secondRightSpawn: {fileID: 0}
-  normalEnemyPrefab: {fileID: 3127415051192751802, guid: 891681bb52d8d064b99b6c56ff2c3c8f, type: 3}
-  heavyEnemyPrefab: {fileID: 6659922337712905617, guid: 37bb2aa5096e66b4c87d8e399d0b4e74, type: 3}
+  poisonEnemyPrefab: {fileID: 3127415051192751802, guid: 891681bb52d8d064b99b6c56ff2c3c8f, type: 3}
+  shurikenEnemyPrefab: {fileID: 6659922337712905617, guid: 37bb2aa5096e66b4c87d8e399d0b4e74, type: 3}
   warningPrefab: {fileID: 8676534104913816729, guid: 9c912cd049df1064cba3fa437e23847b, type: 3}
   firstWaveCount: 4
   secondWaveCount: 6

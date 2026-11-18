@@ -55,6 +55,7 @@ namespace FishingPrototype
             Body = GetComponent<Rigidbody2D>();
             visual = GetComponent<SpriteRenderer>();
             baseColor = visual.color;
+            if (kind == BodyKind.Enemy && statDefinition) maxHealth = statDefinition.Values.hp;
             health = maxHealth;
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;

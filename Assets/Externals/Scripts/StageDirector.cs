@@ -22,7 +22,10 @@ namespace FishingPrototype
         public Transform firstTrigger, secondTrigger;
         public Transform firstLeftSpawn, firstRightSpawn, secondLeftSpawn, secondRightSpawn;
         [Header("출현 프리팹")]
-        public HookableBody normalEnemyPrefab, heavyEnemyPrefab;
+        [UnityEngine.Serialization.FormerlySerializedAs("normalEnemyPrefab")]
+        public HookableBody poisonEnemyPrefab;
+        [UnityEngine.Serialization.FormerlySerializedAs("heavyEnemyPrefab")]
+        public HookableBody shurikenEnemyPrefab;
         public GameObject warningPrefab;
         [Header("출현 설정")]
         public int firstWaveCount = 4, secondWaveCount = 6, maxLivingEnemies = 3;
@@ -141,7 +144,7 @@ namespace FishingPrototype
 
         private HookableBody SpawnEnemy(bool heavy, Vector2 position)
         {
-            var enemy = Instantiate(heavy ? heavyEnemyPrefab : normalEnemyPrefab, position, Quaternion.identity);
+            var enemy = Instantiate(heavy ? shurikenEnemyPrefab : poisonEnemyPrefab, position, Quaternion.identity);
             enemy.GetComponent<TangEnemyAI>().player = player;
             foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) star.ConfigureEnemy(enemy.GetComponent<Collider2D>());
             return enemy;

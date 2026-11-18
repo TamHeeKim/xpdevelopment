@@ -68,11 +68,6 @@ namespace FishingPrototype.Editor
 
         static void BuildEffects()
         {
-            if (!Prefab("EnemyPoison"))
-            {
-                var go = Visual("Effect_EnemyPoison", Vector2.zero, new Vector2(3f, 2f), new Color(0.3f, 0.85f, 0.2f, 0.35f));
-                go.AddComponent<PoisonCloud>(); Save(go, "EnemyPoison");
-            }
             if (!Prefab("CounterPoison"))
             {
                 var go = new GameObject("Effect_CounterPoison"); go.transform.localScale = new Vector3(3f, 2f, 1f);
@@ -88,6 +83,18 @@ namespace FishingPrototype.Editor
                     var renderer=puff.AddComponent<SpriteRenderer>(); renderer.sprite=sprite;renderer.color=new Color(0.75f,0.25f,1f,0.85f);renderer.sortingOrder=6;
                 }
                 Save(go,"CounterPoison");
+            }
+            if (!Prefab("EnemyPoison"))
+            {
+                var go = UnityEngine.Object.Instantiate(Prefab("CounterPoison")); go.name = "Effect_EnemyPoison";
+                go.GetComponent<PoisonCloud>().damagesEnemies = false;
+                foreach (Transform puff in go.transform)
+                {
+                    puff.name = puff.name.Replace("PurpleSmoke", "GreenSmoke");
+                    puff.localScale = new Vector3(0.24f, 0.6f, 1f);
+                    puff.GetComponent<SpriteRenderer>().color = new Color(0.3f, 0.85f, 0.2f, 0.4f);
+                }
+                Save(go, "EnemyPoison");
             }
             if (!Prefab("SpawnWarning")) Save(Visual("Sprite_SpawnWarning",Vector2.zero,new Vector2(1.5f,0.12f),new Color(1f,0.55f,0.2f)),"SpawnWarning");
         }
@@ -111,10 +118,12 @@ namespace FishingPrototype.Editor
             }
             foreach (bool heavy in new[]{false,true})
             {
-                string name=heavy?"HeavyEnemy":"NormalEnemy";if(Prefab(name))continue;
-                var go=CombatAuthoring.CreateHookable("Enemy_"+name,Vector2.zero,heavy?new Vector2(1.35f,2.15f):new Vector2(0.85f,1.65f),Color.red,HookableBody.BodyKind.Enemy,heavy?3.4f:1.15f,heavy?150f:72f,false,heavy?"enemy.heavy":"enemy.normal");
+                string name=heavy?"ShurikenEnemy":"PoisonEnemy";if(Prefab(name))continue;
+                var go=CombatAuthoring.CreateHookable("Enemy_"+name,Vector2.zero,heavy?new Vector2(1.35f,2.15f):new Vector2(0.85f,1.65f),Color.red,HookableBody.BodyKind.Enemy,heavy?3.4f:1.15f,heavy?150f:72f,false,heavy?"enemy.shuriken":"enemy.poison");
                 go.GetComponent<Rigidbody2D>().freezeRotation=true;CombatShapes.DressEnemy(go,heavy);
-                var ai=go.AddComponent<TangEnemyAI>();ai.poisonCloudPrefab=Prefab("EnemyPoison").GetComponent<PoisonCloud>();ai.shurikenPrefab=Prefab("Shuriken").GetComponent<Shuriken>();
+                var ai=go.AddComponent<TangEnemyAI>();ai.enemyType=heavy?TangEnemyAI.EnemyType.Shuriken:TangEnemyAI.EnemyType.Poison;
+                var point=new GameObject("Point_AttackOrigin");point.transform.SetParent(go.transform,false);point.transform.localPosition=new Vector3(0.85f,0.15f,0);ai.attackPoint=point.transform;ai.attackVisual=go.transform.Find("Sprite_독주머니");
+                ai.poisonCloudPrefab=Prefab("EnemyPoison").GetComponent<PoisonCloud>();ai.shurikenPrefab=Prefab("Shuriken").GetComponent<Shuriken>();
                 AddBodyHud(go);Save(go,name);
             }
         }
@@ -128,6 +137,14 @@ namespace FishingPrototype.Editor
             var bg=Image(go.transform,"Image_HealthBackground",0,28,130,4,new Color(0.2f,0.1f,0.13f));
             var fill=Image(bg.transform,"Image_HealthFill",0,0,130,4,new Color(1f,0.43f,0.36f));Fill(fill);
             var hud=go.AddComponent<BodyHud>();hud.body=owner.GetComponent<HookableBody>();hud.canvas=canvas;hud.nameText=label;hud.healthFill=fill;
+            if(owner.GetComponent<Shuriken>())
+            {
+                rect.sizeDelta=new Vector2(36,36);
+                label.rectTransform.sizeDelta=bg.rectTransform.sizeDelta=new Vector2(36,36);
+                bg.rectTransform.anchoredPosition=Vector2.zero;
+                label.alignment=TextAnchor.MiddleCenter;label.fontSize=24;label.text=CombatText.Get("input.counter");
+                label.transform.SetAsLastSibling();
+            }
         }
 
         static void BuildLevel()
@@ -161,7 +178,7 @@ namespace FishingPrototype.Editor
         {
             if(Prefab("Systems"))return;
             var go=new GameObject("System_Combat");go.AddComponent<PrototypeBootstrap>();var stage=go.AddComponent<StageDirector>();
-            stage.normalEnemyPrefab=Prefab("NormalEnemy").GetComponent<HookableBody>();stage.heavyEnemyPrefab=Prefab("HeavyEnemy").GetComponent<HookableBody>();stage.warningPrefab=Prefab("SpawnWarning");Save(go,"Systems");
+            stage.poisonEnemyPrefab=Prefab("PoisonEnemy").GetComponent<HookableBody>();stage.shurikenEnemyPrefab=Prefab("ShurikenEnemy").GetComponent<HookableBody>();stage.warningPrefab=Prefab("SpawnWarning");Save(go,"Systems");
         }
 
         static RectTransform Rect(Transform parent,string name,float x,float y,float width,float height)
@@ -242,7 +259,7 @@ namespace FishingPrototype.Editor
         [MenuItem("낚싯대 전투/전체 편집 씬 검사")]
         public static void Check()
         {
-            foreach(string name in new[]{"NormalEnemy","HeavyEnemy","Bottle","Rock","Shuriken","EnemyPoison","CounterPoison","SpawnWarning","Level","Camera","Systems","Hud"})
+            foreach(string name in new[]{"PoisonEnemy","ShurikenEnemy","Bottle","Rock","Shuriken","EnemyPoison","CounterPoison","SpawnWarning","Level","Camera","Systems","Hud"})
             {
                 var prefab=Prefab(name);if(!prefab)throw new Exception("프리팹 누락: "+name);
                 foreach(var component in prefab.GetComponentsInChildren<MonoBehaviour>(true))if(!component||!MonoScript.FromMonoBehaviour(component))throw new Exception("스크립트 누락: "+name);
