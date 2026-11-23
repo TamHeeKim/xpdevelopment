@@ -143,8 +143,11 @@ namespace FishingPrototype
         private IEnumerator Flash()
         {
             visual.color = Color.white;
+            var meshes = GetComponentsInChildren<SkinnedMeshRenderer>();
+            foreach (var mesh in meshes) mesh.enabled = false;
             yield return new WaitForSeconds(0.08f);
             visual.color = baseColor;
+            foreach (var mesh in meshes) mesh.enabled = !respawning && health > 0;
             flashRoutine = null;
         }
 
@@ -153,7 +156,7 @@ namespace FishingPrototype
             respawning = true;
             ClearThrow();
             SetHooked(false);
-            foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = false;
+            foreach (var renderer in GetComponentsInChildren<Renderer>()) renderer.enabled = false;
             GetComponent<Collider2D>().enabled = false;
             Body.simulated = false;
             if (!respawnOnDeath)
@@ -168,7 +171,7 @@ namespace FishingPrototype
             Body.linearVelocity = Vector2.zero;
             Body.angularVelocity = 0f;
             health = maxHealth;
-            foreach (var sprite in GetComponentsInChildren<SpriteRenderer>()) sprite.enabled = true;
+            foreach (var renderer in GetComponentsInChildren<Renderer>()) renderer.enabled = true;
             GetComponent<Collider2D>().enabled = true;
             respawning = false;
         }

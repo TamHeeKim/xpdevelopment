@@ -10,6 +10,7 @@ namespace FishingPrototype
         public PlayerController player;
         public Transform attackPoint;
         public Transform attackVisual;
+        public Transform model;
         public PoisonCloud poisonCloudPrefab;
         public Shuriken shurikenPrefab;
         [Header("감지와 이동")]
@@ -41,7 +42,7 @@ namespace FishingPrototype
         PoisonCloud spray;
         Vector2 sprayDirection;
         Vector3 visualPosition;
-        Quaternion visualRotation;
+        Quaternion visualRotation, modelRotation;
         SpriteRenderer[] facingParts;
         Vector3[] partPositions;
         bool[] partFlips;
@@ -52,6 +53,7 @@ namespace FishingPrototype
         {
             body = GetComponent<HookableBody>(); visual = GetComponent<SpriteRenderer>();
             if (attackVisual) { visualPosition = attackVisual.localPosition; visualRotation = attackVisual.localRotation; }
+            if (model) modelRotation = model.localRotation;
             facingParts = GetComponentsInChildren<SpriteRenderer>();
             partPositions = new Vector3[facingParts.Length]; partFlips = new bool[facingParts.Length];
             for (int i = 0; i < facingParts.Length; i++)
@@ -160,6 +162,7 @@ namespace FishingPrototype
                 Vector3 point = attackPoint.localPosition;
                 point.x = Mathf.Abs(point.x) * direction; attackPoint.localPosition = point;
             }
+            if (model) model.localRotation = Quaternion.Euler(0, direction < 0 ? 180 : 0, 0) * modelRotation;
             for (int i = 0; i < facingParts.Length; i++)
             {
                 var part = facingParts[i]; part.flipX = partFlips[i] ^ (direction < 0f);

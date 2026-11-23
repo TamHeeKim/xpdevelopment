@@ -35,10 +35,10 @@ namespace FishingPrototype.Editor
                 gasBody.Body.position = new Vector2(1004, 1000); Call(gas, "FixedUpdate");
                 Check(gas.State == TangEnemyAI.ActionState.Windup && gasBody.Body.linearVelocity.x == 0, "독가스 공격 경계에서 즉시 준비해야 한다.");
                 player.Body.position = new Vector2(1008, 1000); Call(gas, "FixedUpdate");
-                Check(gas.attackPoint.localPosition.x > 0 && gas.transform.Find("Sprite_눈").localPosition.x > 0, "준비 중 반대편으로 이동하면 예고 지점과 외형이 함께 돌아야 한다.");
+                Check(gas.attackPoint.localPosition.x > 0 && Quaternion.Angle(gas.model.localRotation, Quaternion.identity) < .1f, "준비 중 반대편으로 이동하면 예고 지점과 외형이 함께 돌아야 한다.");
                 player.Body.position = new Vector2(1000, 1000);
                 Set(gas, "until", Time.time - 1); Call(gas, "FixedUpdate");
-                Check(gas.attackPoint.localPosition.x < 0 && gas.transform.Find("Sprite_눈").localPosition.x < 0, "독가스 분사 직전에도 지점과 외형을 다시 맞춰야 한다.");
+                Check(gas.attackPoint.localPosition.x < 0 && Quaternion.Angle(gas.model.localRotation, Quaternion.Euler(0,180,0)) < .1f, "독가스 분사 직전에도 지점과 외형을 다시 맞춰야 한다.");
                 var cloud = (PoisonCloud)typeof(TangEnemyAI).GetField("spray", flags).GetValue(gas);
                 Check(cloud && gas.State == TangEnemyAI.ActionState.Spraying, "준비 후 분사를 시작해야 한다.");
                 Check(Mathf.Abs(cloud.area.x - gas.gasRange) < 0.01f, "분사 시작부터 전체 gasRange 판정이 있어야 한다.");
@@ -75,7 +75,7 @@ namespace FishingPrototype.Editor
                 Set(ranged, "until", Time.time - 1); Call(ranged, "FixedUpdate");
                 var shot = UnityEngine.Object.FindFirstObjectByType<Shuriken>();
                 Check(shot && ranged.State == TangEnemyAI.ActionState.Recovery, "수리검 발사 직후 대기해야 한다.");
-                Check(ranged.attackPoint.localPosition.x > 0 && ranged.transform.Find("Sprite_눈").localPosition.x > 0
+                Check(ranged.attackPoint.localPosition.x > 0 && Quaternion.Angle(ranged.model.localRotation, Quaternion.identity) < .1f
                     && shot.transform.position.x > rangedBody.Body.position.x && shot.GetComponent<Rigidbody2D>().linearVelocity.x > 0,
                     "수리검 발사 순간 바뀐 플레이어 방향으로 외형·발사 지점·속도를 맞춰야 한다.");
                 player.Body.position = new Vector2(1000, 1000);
@@ -136,6 +136,26 @@ namespace FishingPrototype.Editor
                 poison.until = Time.time + 0.1f; contact.refreshDurationOnContact = false;
                 player.Body.position = gasObject.transform.position; Physics2D.SyncTransforms(); Call(contact, "FixedUpdate");
                 Check(Mathf.Abs(poison.until - Time.time - 0.1f) < 0.01f, "갱신 끔이면 중독 중 재접촉도 시간을 갱신하지 않는다.");
+                foreach (string prefab in new[] { "PoisonEnemy", "ShurikenEnemy" })
+                {
+                    var actor = Actor(prefab, root.transform, player.Body.position + Vector2.right * 3);
+                    var ai = actor.GetComponent<TangEnemyAI>(); ai.player = player; Call(ai, "Start");
+                    Check(ai.model && actor.transform.localScale.z > 0, "적 모델 연결과 Z 스케일");
+                    var mesh = ai.model.GetComponentInChildren<SkinnedMeshRenderer>();
+                    Check(mesh && ai.model.GetComponentsInChildren<Collider>().Length == 0, "적 3D 외형은 충돌을 추가하지 않아야 한다.");
+                    Call(ai, "FacePlayer");
+                    Check(Quaternion.Angle(ai.model.localRotation, Quaternion.Euler(0,180,0)) < .1f, "적 모델 좌향 회전");
+                    actor.SetHooked(true); Check(mesh.enabled, "포획해도 모델을 유지해야 한다."); actor.SetHooked(false);
+                    var flash = (System.Collections.IEnumerator)typeof(HookableBody).GetMethod("Flash", flags).Invoke(actor, null);
+                    flash.MoveNext(); Check(!mesh.enabled, "적 모델 피격 표시");
+                    flash.MoveNext(); Check(mesh.enabled, "적 모델 피격 표시 복구");
+                    actor.respawnOnDeath = true;
+                    var respawn = (System.Collections.IEnumerator)typeof(HookableBody).GetMethod("Respawn", flags).Invoke(actor, null);
+                    respawn.MoveNext(); Check(!mesh.enabled, "적 모델 사망 표시");
+                    flash = (System.Collections.IEnumerator)typeof(HookableBody).GetMethod("Flash", flags).Invoke(actor, null);
+                    flash.MoveNext(); flash.MoveNext(); Check(!mesh.enabled, "피격 종료가 사망 모델을 다시 표시하면 안 된다.");
+                    respawn.MoveNext(); Check(mesh.enabled, "적 모델 부활 표시");
+                }
                 Debug.Log("ENEMY SPEC CHECKS PASSED");
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
