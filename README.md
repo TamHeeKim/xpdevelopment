@@ -87,3 +87,12 @@ holdDistance/slamRange는 catchRange와 독립적입니다. catchHold, shurikenC
 - ProPixelizer 2.0.3: `WF/Addon/ProPixelizer`. 외부 패키지 내부 구조는 유지하고 Utils.PackageLocation만 배치 경로에 맞췄습니다.
 - `Assets/Settings/PC_Renderer.asset`의 SSAO 다음에 ProPixelizer Render Feature 등록. PC_RPAsset의 MSAA 비활성, Depth Priming 비활성, Render Graph 활성 설정을 사용합니다. Mobile 렌더러에는 적용하지 않았습니다.
 - 픽셀 효과는 제공된 ProPixelizer 머티리얼/카메라 설정을 사용합니다. 기능 등록만으로 기존 게임의 모델이나 애니메이션이 교체되지는 않습니다.
+
+
+### 전투 씬 아트 적용 (2026-11-23)
+
+`FishingPrototype.unity`에서 WF 배경과 FisherMan 모델을 사용합니다. 배경은 `Prefab_WFBackground.prefab`, 플레이어 외형은 `Prefab_Player.prefab/Model_FisherMan`에서 편집합니다. 기존 Level 프리팹의 바닥·게이트·체크포인트·스폰 지점은 유지하고 임시 배경 스프라이트만 숨겼습니다.
+
+플레이어는 기존 Rigidbody2D/Collider2D를 유지하며 3D 모델은 외형만 담당합니다. 모델에 애니메이션 클립이 없어 기본 자세로 이동하며 좌우 회전, 피격 깜빡임, 사망/부활 표시를 연결했습니다. Z 스케일은 1로 수정하고 모델 아래에서 비율을 보정합니다. WF 배경은 전투 구간에 맞춰 반복 배치했으며 물 반사 스크립트는 전투 카메라에서 발생한 프러스텀 경고 때문에 제외했습니다. 원본 WF 데모는 그대로 유지합니다.
+
+외형 회귀 검사: `낚싯대 전투 > 플레이어 아트 연결 검사`.

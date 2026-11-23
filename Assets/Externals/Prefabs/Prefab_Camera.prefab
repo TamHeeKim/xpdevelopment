@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4619450520312155489}
   - component: {fileID: 6274627385097312296}
   - component: {fileID: 6773633766565351073}
+  - component: {fileID: 141655638990554458}
   m_Layer: 0
   m_Name: Prefab_Camera
   m_TagString: MainCamera
@@ -45,7 +46,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.055, g: 0.075, b: 0.105, a: 1}
+  m_BackGroundColor: {r: 0.65281236, g: 0.8490566, b: 0.7782846, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -104,9 +105,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d2f6d52aada945d9a58e1cb093e87788, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.SmoothCameraFollow
   target: {fileID: 0}
+  offset: {x: 2.2, y: 0.35, z: -10}
+  smoothTime: 0.24
 --- !u!114 &6773633766565351073
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -117,5 +120,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76b6eab20617411fb09765b71effe251, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishingPrototype.CameraShake
+--- !u!114 &141655638990554458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4347568539610700945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 673db127ebcbeb1469f3f1386b9de813, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProPixelizer::ProPixelizer.ProPixelizerCamera
+  SubCamera: {fileID: 0}
+  SubcameraExcludedLayers:
+    serializedVersion: 2
+    m_Bits: 34
+  FixedTargetResolution: 320
+  ClampCameraOrthoSize: 1
+  Mode: 0
+  PixelSize: 0.032
+  overrideUsePixelExpansion: 0
+  UsePixelExpansion: 1
+  PixelizationFilter: 0
+  UsePixelArtUpscalingFilter: 1
+  TargetScale: 1
+  FullscreenColorGradingLUT: {fileID: 0}
+  EnableProPixelizer: 1
