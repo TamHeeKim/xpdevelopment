@@ -79,7 +79,7 @@ namespace FishingPrototype
         {
             if (!player.Body || !player.Body.simulated) { Interrupt(); return; }
             UpdateRodVisual();
-            Vector2 cursor = Camera.main ? (Vector2)Camera.main.ScreenToWorldPoint(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero) : RodAnchor + aim;
+            Vector2 cursor = Camera.main ? GetCursorWorldPosition(Camera.main, Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero) : RodAnchor + aim;
             if ((cursor - player.Body.position).sqrMagnitude > 0.0001f) aim = (cursor - player.Body.position).normalized;
             if (!player.ControlsLocked)
             {
@@ -87,6 +87,13 @@ namespace FishingPrototype
                 else if (Mouse.current?.rightButton.wasPressedThisFrame ?? false) BeginCapture(cursor);
             }
             UpdateTargetOutline(state == RodState.Idle && !player.ControlsLocked ? SelectCatchTarget(cursor) : null);
+        }
+        private Vector2 GetCursorWorldPosition(Camera camera, Vector2 screenPosition)
+        {
+            // 전투 판정은 Z=0 평면에 있으므로 원근 카메라에서도 같은 평면을 조준한다.
+            Ray ray = camera.ScreenPointToRay(screenPosition);
+            return new Plane(Vector3.forward, Vector3.zero).Raycast(ray, out float distance)
+                ? (Vector2)ray.GetPoint(distance) : (Vector2)RodAnchor;
         }
         private void FixedUpdate()
         {

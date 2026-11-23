@@ -45,7 +45,29 @@ namespace FishingPrototype.Editor
                 Call(appearance, "LateUpdate");
                 if (model.GetComponentInChildren<SkinnedMeshRenderer>().enabled)
                     throw new Exception("피격 표시 오류");
-                Debug.Log("플레이어 아트 연결 검사 통과");
+                var cameraObject = new GameObject("Camera_ProjectionCheck");
+                try
+                {
+                    var camera = cameraObject.AddComponent<Camera>();
+                    camera.transform.position = new Vector3(0, 0.35f, -10);
+                    camera.fieldOfView = 54.948f;
+                    camera.pixelRect = new Rect(0, 0, 1280, 720);
+                    var rod = player.GetComponentInChildren<FishingRodController>();
+                    var project = typeof(FishingRodController).GetMethod("GetCursorWorldPosition", BindingFlags.Instance | BindingFlags.NonPublic);
+                    foreach (bool orthographic in new[] { false, true })
+                    {
+                        camera.orthographic = orthographic;
+                        foreach (var point in new[] { Vector3.zero, new Vector3(3, 2, 0), new Vector3(-5, -1, 0) })
+                        {
+                            Vector2 screen = camera.WorldToScreenPoint(point);
+                            var actual = (Vector2)project.Invoke(rod, new object[] { camera, screen });
+                            if (Vector2.Distance(actual, point) > 0.001f)
+                                throw new Exception("카메라 투영 방식에 따른 조준 좌표 불일치");
+                        }
+                    }
+                }
+                finally { UnityEngine.Object.DestroyImmediate(cameraObject); }
+                Debug.Log("플레이어 아트·카메라 조준 검사 통과");
             }
             finally { UnityEngine.Object.DestroyImmediate(player); }
         }
