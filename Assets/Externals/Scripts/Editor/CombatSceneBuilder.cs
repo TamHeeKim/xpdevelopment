@@ -165,8 +165,8 @@ namespace FishingPrototype.Editor
         {
             if(Prefab("Camera"))return;
             var go=new GameObject("Camera_Main");go.tag="MainCamera";go.transform.position=new Vector3(0,0.5f,-10);
-            var camera=go.AddComponent<Camera>();camera.orthographic=false;camera.fieldOfView=54.948f;camera.orthographicSize=5.2f;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(0.055f,0.075f,0.105f);
-            go.AddComponent<AudioListener>();go.AddComponent<SmoothCameraFollow>();go.AddComponent<CameraShake>();Save(go,"Camera");
+            var camera=go.AddComponent<Camera>();camera.orthographic=false;camera.fieldOfView=60f;camera.orthographicSize=5.2f;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(0.055f,0.075f,0.105f);
+            go.AddComponent<AudioListener>();go.AddComponent<SmoothCameraFollow>().offset=new Vector3(2.2f,-0.775f,-10f);go.AddComponent<CameraShake>();Save(go,"Camera");
         }
         static void BuildSystems()
         {
