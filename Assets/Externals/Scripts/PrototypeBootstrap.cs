@@ -17,7 +17,7 @@ namespace FishingPrototype
 
         private void Update()
         {
-            if ((Keyboard.current?.rKey.wasPressedThisFrame ?? false) || (Keyboard.current?.f9Key.wasPressedThisFrame ?? false))
+            if ((Keyboard.current?.rKey.wasPressedThisFrame ?? false) && !(FindFirstObjectByType<StageDirector>()?.IsTransitioning ?? false))
                 Reload();
         }
 

@@ -49,12 +49,8 @@ namespace FishingPrototype.Editor
             var hudObject = Instance("Hud", "Canvas_CombatHud", scene);
             var follow = camera.GetComponent<SmoothCameraFollow>(); follow.target = player.transform;
             var stage = systems.GetComponent<StageDirector>(); stage.player = player; stage.rod = player.GetComponentInChildren<FishingRodController>();
-            stage.combatGate = level.transform.Find("Environment_CombatGate").gameObject;
-            stage.finishGate = level.transform.Find("Environment_FinishGate").gameObject;
-            stage.startCheckpoint = level.transform.Find("Point_StartCheckpoint"); stage.middleCheckpoint = level.transform.Find("Point_MiddleCheckpoint");
-            stage.firstTrigger = level.transform.Find("Point_FirstTrigger"); stage.secondTrigger = level.transform.Find("Point_SecondTrigger");
-            stage.firstLeftSpawn = level.transform.Find("Point_FirstLeft"); stage.firstRightSpawn = level.transform.Find("Point_FirstRight");
-            stage.secondLeftSpawn = level.transform.Find("Point_SecondLeft"); stage.secondRightSpawn = level.transform.Find("Point_SecondRight");
+            stage.mapEntry = level.transform.Find("Point_MapEntry");
+            stage.mapExit = level.transform.Find("Point_MapExit");
             var hud = hudObject.GetComponent<CombatHud>(); hud.player = player; hud.health = player.GetComponent<PlayerHealth>(); hud.rod = stage.rod; hud.stage = stage;
             foreach (var component in new Component[] { follow, stage, hud })
             { EditorUtility.SetDirty(component); PrefabUtility.RecordPrefabInstancePropertyModifications(component); }
@@ -151,11 +147,8 @@ namespace FishingPrototype.Editor
             Visual("Sprite_SeaSurface",new Vector2(17,-3.18f),new Vector2(78,0.12f),new Color(0.2f,0.72f,0.9f),level.transform).GetComponent<SpriteRenderer>().sortingOrder=-3;
             var ground=Visual("Environment_Ground",new Vector2(17,-2.65f),new Vector2(78,1.25f),new Color(0.13f,0.18f,0.22f),level.transform);ground.AddComponent<BoxCollider2D>();
             Visual("Sprite_GroundEdge",new Vector2(17,-2f),new Vector2(78,0.08f),new Color(0.33f,0.78f,0.68f),level.transform).GetComponent<SpriteRenderer>().sortingOrder=1;
-            Visual("Environment_CombatGate",new Vector2(10.5f,1.3f),new Vector2(0.3f,6.6f),new Color(0.85f,0.25f,0.22f,0.72f),level.transform).AddComponent<BoxCollider2D>();
-            Visual("Environment_FinishGate",new Vector2(36.5f,1.3f),new Vector2(0.3f,6.6f),new Color(0.74f,0.24f,0.78f,0.72f),level.transform).AddComponent<BoxCollider2D>();
-            Point(level,"Point_StartCheckpoint",-8,-1.15f);Point(level,"Point_MiddleCheckpoint",14,-1.15f);
-            Point(level,"Point_FirstTrigger",-4.5f,0);Point(level,"Point_SecondTrigger",20.5f,0);
-            Point(level,"Point_FirstLeft",1.5f,-1.1f);Point(level,"Point_FirstRight",8.5f,-1.1f);Point(level,"Point_SecondLeft",23,-1.1f);Point(level,"Point_SecondRight",34,-1.1f);
+            Point(level,"Point_MapEntry",-8,-1.15f);
+            Point(level,"Point_MapExit",44,-1.15f);
             for(int i=0;i<3;i++){var bottle=(GameObject)PrefabUtility.InstantiatePrefab(Prefab("Bottle"));bottle.name="Prop_PoisonBottle_"+i;bottle.transform.SetParent(level.transform,false);bottle.transform.localPosition=new Vector3(i*12,-1.5f,0);}
             var rock=(GameObject)PrefabUtility.InstantiatePrefab(Prefab("Rock"));rock.name="Prop_ThrowingRock";rock.transform.SetParent(level.transform,false);rock.transform.localPosition=new Vector3(-1,-1.55f,0);
             Save(level,"Level");
@@ -202,7 +195,7 @@ namespace FishingPrototype.Editor
             LocalText(root,"hud.tip",42,96,264,22,14);
             hud.poisonPanel=Image(root,"Image_PoisonPanel",24,132,300,36,new Color(0.15f,0.24f,0.09f,0.95f)).gameObject;
             hud.poisonText=Text(hud.poisonPanel.transform,"Text_Poison",14,6,285,25,CombatText.Format("hud.poison",2f),14);hud.poisonPanel.SetActive(false);
-            Image(root,"Image_ObjectivePanel",866,24,390,92,panel);LocalText(root,"hud.objective",884,34,350,25,14);hud.objectiveText=Text(root,"Text_Objective",884,60,350,48,CombatText.Get("objective.start"),18);
+            Image(root,"Image_ObjectivePanel",866,24,390,92,panel);LocalText(root,"hud.objective",884,34,350,25,14);hud.objectiveText=Text(root,"Text_Objective",884,60,350,48,CombatText.Format("road.progress",1,0),18);
             hud.capturePanel=Image(root,"Image_CapturePanel",490,435,300,55,panel).gameObject;LocalText(hud.capturePanel.transform,"hud.capture_heavy",14,7,270,24,14);
             hud.captureFill=Image(hud.capturePanel.transform,"Image_CaptureFill",14,38,272,5,accent);Fill(hud.captureFill);hud.capturePanel.SetActive(false);
             Image(root,"Image_EquipmentPanel",24,620,320,76,panel);hud.heldText=Text(root,"Text_Held",40,630,290,27,CombatText.Format("hud.equipped",CombatText.Get("equipment.bobber")),18);

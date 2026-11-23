@@ -1,170 +1,137 @@
-using UnityEngine.InputSystem;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FishingPrototype
 {
     public sealed class StageDirector : MonoBehaviour
     {
-        [UnityEngine.Serialization.FormerlySerializedAs("Player")]
-        [Header("연결")]
-        public PlayerController player;
-        [UnityEngine.Serialization.FormerlySerializedAs("Rod")]
-        public FishingRodController rod;
-
-        private readonly List<HookableBody> waveOne = new List<HookableBody>();
-        private readonly List<HookableBody> waveTwo = new List<HookableBody>();
         [Header("씬 연결")]
-        public GameObject combatGate;
-        public GameObject finishGate;
-        public Transform startCheckpoint, middleCheckpoint;
-        public Transform firstTrigger, secondTrigger;
-        public Transform firstLeftSpawn, firstRightSpawn, secondLeftSpawn, secondRightSpawn;
+        public PlayerController player;
+        public FishingRodController rod;
+        public Transform mapEntry, mapExit;
+        public string nextScene = "Road_02";
         [Header("출현 프리팹")]
-        [UnityEngine.Serialization.FormerlySerializedAs("normalEnemyPrefab")]
-        public HookableBody poisonEnemyPrefab;
-        [UnityEngine.Serialization.FormerlySerializedAs("heavyEnemyPrefab")]
-        public HookableBody shurikenEnemyPrefab;
+        public HookableBody poisonEnemyPrefab, shurikenEnemyPrefab;
         public GameObject warningPrefab;
-        [Header("출현 설정")]
-        public int firstWaveCount = 4, secondWaveCount = 6, maxLivingEnemies = 3;
-        public float warningTime = 1.2f, spawnInterval = 1f, groupInterval = 3f;
-        public Vector2 warningOffset = new Vector2(0f, -0.85f);
+        [Header("연속 출현 (임시값)")]
+        [Min(1)] public int maxLivingEnemies = 4;
+        [Min(0.1f)] public float warningTime = 1.2f, spawnInterval = 2f;
+        [Min(3f)] public float spawnAheadDistance = 14f;
+        [Min(1f)] public float minimumSpawnDistance = 3f;
+        [Min(5f)] public float cleanupBehindDistance = 20f;
+        public Vector2 warningOffset = new Vector2(0, -0.85f);
         public float heavySpawnOffset = 0.2f;
         public string ObjectiveText { get; private set; } = "";
-        private bool waveOneStarted;
-        private bool waveOneCleared;
-        private bool catchReady;
-        private bool waveTwoStarted;
-        private bool stageComplete;
-        private bool firstSpawnComplete, secondSpawnComplete;
-        private GameObject spawnWarning;
+        public bool IsTransitioning { get; private set; }
+        public int MapNumber => mapNumber;
+        static int mapNumber = 1;
+        static float incomingHealth = -1;
+        readonly List<HookableBody> enemies = new List<HookableBody>();
+        GameObject spawnWarning;
+        int spawnedCount;
 
-        private void Start()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetSession() { mapNumber = 1; incomingHealth = -1; }
+
+        void Start()
         {
-            if (PlayerPrefs.GetInt("TangCheckpoint", 0) == 1)
-            {
-                waveOneStarted = waveOneCleared = catchReady = true;
-                combatGate.SetActive(false);
-                player.transform.position = middleCheckpoint.position;
-                player.GetComponent<PlayerHealth>().SetCheckpoint(player.transform.position);
-            }
-            SetObjective(CombatText.Get("objective.start"));
+            if (!player || !rod || !mapEntry || !mapExit || mapExit.position.x <= mapEntry.position.x
+                || !poisonEnemyPrefab || !shurikenEnemyPrefab || !warningPrefab
+                || !Application.CanStreamedLevelBeLoaded(nextScene))
+                throw new System.InvalidOperationException("맵 입구·출구·출현 프리팹과 빌드 목록의 다음 씬을 확인하세요.");
+            player.transform.position = mapEntry.position;
+            player.Body.position = mapEntry.position;
+            player.Body.linearVelocity = Vector2.zero;
+            var health = player.GetComponent<PlayerHealth>();
+            health.SetCheckpoint(mapEntry.position);
+            if (incomingHealth >= 0) { health.RestoreHealth(incomingHealth); incomingHealth = -1; }
+            var camera = Camera.main;
+            if (camera && camera.TryGetComponent<SmoothCameraFollow>(out var follow))
+                camera.transform.position = new Vector3(player.transform.position.x + follow.offset.x, follow.offset.y, follow.offset.z);
+            StartCoroutine(SpawnContinuously());
         }
 
-        private void Update()
+        void Update()
         {
-            if ((Keyboard.current?.fKey.wasPressedThisFrame ?? false) &&
-                (player.transform.position.x < startCheckpoint.position.x + 3f || (waveOneCleared && Mathf.Abs(player.transform.position.x - middleCheckpoint.position.x) < 2f)))
-            {
-                bool second = waveOneCleared && player.transform.position.x > combatGate.transform.position.x;
-                catchReady = second;
-                Vector2 point = second ? middleCheckpoint.position : startCheckpoint.position;
-                player.GetComponent<PlayerHealth>().SetCheckpoint(point);
-                player.GetComponent<PlayerHealth>().Heal();
-                PlayerPrefs.SetInt("TangCheckpoint", second ? 1 : 0);
-                PlayerPrefs.Save();
-                SetObjective(CombatText.Get("objective.saved"));
-            }
-            if (!waveOneStarted && player.transform.position.x > firstTrigger.position.x)
-            {
-                waveOneStarted = true;
-                StartCoroutine(SpawnEncounter(waveOne, false));
-            }
+            if (IsTransitioning || !player.Body.simulated) return;
+            CleanupEnemies();
+            ObjectiveText = CombatText.Format("road.progress", mapNumber, LivingCount());
+            if (player.transform.position.x >= mapExit.position.x) GoToNextMap();
+        }
 
-            if (waveOneStarted && firstSpawnComplete && !waveOneCleared && AllDefeated(waveOne))
-            {
-                waveOneCleared = true;
-                combatGate.SetActive(false);
-                SetObjective(CombatText.Get("objective.first_clear"));
-            }
-
-            if (waveOneCleared && !waveTwoStarted && player.transform.position.x > secondTrigger.position.x)
-            {
-                waveTwoStarted = true;
-                StartCoroutine(SpawnEncounter(waveTwo, true));
-            }
-
-            if (waveTwoStarted && secondSpawnComplete && !stageComplete && AllDefeated(waveTwo))
-            {
-                stageComplete = true;
-                finishGate.SetActive(false);
-                SetObjective(CombatText.Get("objective.complete"));
-            }
+        void GoToNextMap()
+        {
+            if (IsTransitioning || !player.Body.simulated) return;
+            IsTransitioning = true;
+            StopAllCoroutines();
+            if (spawnWarning) Destroy(spawnWarning);
+            rod.Interrupt();
+            incomingHealth = player.GetComponent<PlayerHealth>().Health;
+            mapNumber++;
+            player.ControlsLocked = true;
+            ObjectiveText = CombatText.Get("road.transition");
+            SceneManager.LoadSceneAsync(nextScene, LoadSceneMode.Single);
         }
 
         public void ResetEncounter()
         {
+            if (IsTransitioning) return;
             StopAllCoroutines();
             if (spawnWarning) Destroy(spawnWarning);
-            firstSpawnComplete = secondSpawnComplete = false;
-            foreach (var enemy in waveOne) if (enemy) Destroy(enemy.gameObject);
-            foreach (var enemy in waveTwo) if (enemy) Destroy(enemy.gameObject);
-            waveOne.Clear(); waveTwo.Clear();
+            foreach (var enemy in enemies) if (enemy) Destroy(enemy.gameObject);
+            enemies.Clear();
             foreach (var cloud in FindObjectsByType<PoisonCloud>(FindObjectsSortMode.None)) Destroy(cloud.gameObject);
             foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) Destroy(star.gameObject);
-            waveTwoStarted = stageComplete = false; finishGate.SetActive(true);
-            if (!catchReady) { waveOneStarted = waveOneCleared = false; combatGate.SetActive(true); }
-            SetObjective(CombatText.Get("objective.retry"));
+            spawnedCount = 0;
+            StartCoroutine(SpawnContinuously());
         }
 
-        private IEnumerator SpawnEncounter(List<HookableBody> wave, bool second)
+        IEnumerator SpawnContinuously()
         {
-            int total = second ? secondWaveCount : firstWaveCount;
-            for (int i = 0; i < total; i++)
+            yield return new WaitForSeconds(spawnInterval);
+            while (!IsTransitioning)
             {
-                // Keep the arena readable: at most three living enemies at a time.
-                while (LivingCount(wave) >= maxLivingEnemies) yield return new WaitForSeconds(0.3f);
-                Vector2 spawnPoint = ChooseSpawnPoint(second);
-                float x = spawnPoint.x;
-                spawnWarning = Instantiate(warningPrefab, spawnPoint + warningOffset, Quaternion.identity);
-                SetObjective(CombatText.Format("wave.approach_count", second ? CombatText.Get("wave.second") : CombatText.Get("wave.first"), i + 1, total));
+                Vector2 point = ChooseSpawnPoint();
+                if (!player.Body.simulated || LivingCount() >= Mathf.Max(1, maxLivingEnemies) || !CanSpawnAt(point))
+                { yield return new WaitForSeconds(.25f); continue; }
+                spawnWarning = Instantiate(warningPrefab, point + warningOffset, Quaternion.identity);
                 yield return new WaitForSeconds(warningTime);
-                // Re-warn if the player moved onto the spawn point during the telegraph.
-                while (Mathf.Abs(player.transform.position.x-x) < 2.5f)
-                {
-                    spawnPoint = ChooseSpawnPoint(second); x = spawnPoint.x;
-                    spawnWarning.transform.position = spawnPoint + warningOffset;
-                    yield return new WaitForSeconds(warningTime);
-                }
-                bool heavy = second ? i%3==2 : i==3;
-                wave.Add(SpawnEnemy(heavy,spawnPoint + Vector2.up * (heavy ? heavySpawnOffset : 0f)));
-                Destroy(spawnWarning); spawnWarning=null;
-                SetObjective(CombatText.Format("wave.remaining_count", second ? CombatText.Get("wave.second") : CombatText.Get("wave.first"), LivingCount(wave) + total - i - 1));
-                if(i+1<total) yield return new WaitForSeconds(i%2==1?groupInterval:spawnInterval);
+                if (spawnWarning) Destroy(spawnWarning);
+                spawnWarning = null;
+                // 예고 중 플레이어가 출현 지점을 지나거나 접근하면 새 위치에서 다시 예고한다.
+                if (!player.Body.simulated || !CanSpawnAt(point)) continue;
+                bool heavy = spawnedCount++ % 2 == 1;
+                var enemy = Instantiate(heavy ? shurikenEnemyPrefab : poisonEnemyPrefab,
+                    point + Vector2.up * (heavy ? heavySpawnOffset : 0), Quaternion.identity);
+                enemy.respawnOnDeath = false;
+                enemy.GetComponent<TangEnemyAI>().player = player;
+                enemies.Add(enemy);
+                foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) star.ConfigureEnemy(enemy.GetComponent<Collider2D>());
+                yield return new WaitForSeconds(spawnInterval);
             }
-            if(second) secondSpawnComplete=true; else firstSpawnComplete=true;
         }
-        private static int LivingCount(List<HookableBody> wave)
+
+        Vector2 ChooseSpawnPoint() => new Vector2(
+            Mathf.Min(player.transform.position.x + Mathf.Max(spawnAheadDistance, minimumSpawnDistance), mapExit.position.x - 2f), mapEntry.position.y);
+        bool CanSpawnAt(Vector2 point) => point.x - player.transform.position.x >= minimumSpawnDistance;
+        int LivingCount()
         {
-            int count=0; foreach(var enemy in wave) if(enemy && enemy.Body.simulated) count++;
+            int count = 0;
+            foreach (var enemy in enemies) if (enemy && enemy.Health > 0 && enemy.Body.simulated) count++;
             return count;
         }
-
-        private HookableBody SpawnEnemy(bool heavy, Vector2 position)
+        void CleanupEnemies()
         {
-            var enemy = Instantiate(heavy ? shurikenEnemyPrefab : poisonEnemyPrefab, position, Quaternion.identity);
-            enemy.GetComponent<TangEnemyAI>().player = player;
-            foreach (var star in FindObjectsByType<Shuriken>(FindObjectsSortMode.None)) star.ConfigureEnemy(enemy.GetComponent<Collider2D>());
-            return enemy;
-        }
-
-        private Vector2 ChooseSpawnPoint(bool second)
-        {
-            Transform left = second ? secondLeftSpawn : firstLeftSpawn;
-            Transform right = second ? secondRightSpawn : firstRightSpawn;
-            return Mathf.Abs(player.transform.position.x - left.position.x) >= Mathf.Abs(player.transform.position.x - right.position.x)
-                ? left.position : right.position;
-        }
-        private void SetObjective(string message) => ObjectiveText = message;
-
-        private static bool AllDefeated(List<HookableBody> enemies)
-        {
-            if (enemies.Count == 0) return false;
-            foreach (HookableBody enemy in enemies)
-                if (enemy) return false;
-            return true;
+            for (int i = enemies.Count - 1; i >= 0; i--)
+            {
+                var enemy = enemies[i];
+                if (!enemy) { enemies.RemoveAt(i); continue; }
+                if (!enemy.IsHooked && (enemy.transform.position.y < -12f
+                    || (!enemy.IsThrown && enemy.transform.position.x < player.transform.position.x - cleanupBehindDistance)))
+                { Destroy(enemy.gameObject); enemies.RemoveAt(i); }
+            }
         }
     }
 }

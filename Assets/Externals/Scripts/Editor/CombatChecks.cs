@@ -14,26 +14,19 @@ namespace FishingPrototype.Editor
                 var playerObject = new GameObject("Test_Player");
                 playerObject.transform.SetParent(root.transform);
                 stage.player = playerObject.AddComponent<PlayerController>();
-                var points = new Transform[4];
-                for (int i = 0; i < points.Length; i++)
+                stage.mapEntry = new GameObject("Point_Entry").transform; stage.mapEntry.SetParent(root.transform); stage.mapEntry.position = new Vector2(-8,-1.15f);
+                stage.mapExit = new GameObject("Point_Exit").transform; stage.mapExit.SetParent(root.transform); stage.mapExit.position = new Vector2(44,-1.15f);
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                var choose = typeof(StageDirector).GetMethod("ChooseSpawnPoint", flags);
+                var valid = typeof(StageDirector).GetMethod("CanSpawnAt", flags);
+                foreach (float x in new[] { -8f, 10f, 38f, 43f })
                 {
-                    points[i] = new GameObject("Point_" + i).transform;
-                    points[i].SetParent(root.transform);
-                    points[i].position = new Vector2(i * 13f - 7f, i + 2f);
-                }
-                stage.firstLeftSpawn = points[0]; stage.firstRightSpawn = points[1];
-                stage.secondLeftSpawn = points[2]; stage.secondRightSpawn = points[3];
-                var choose = typeof(StageDirector).GetMethod("ChooseSpawnPoint", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                for (int wave = 0; wave < 2; wave++)
-                {
-                    Vector2 left = points[wave * 2].position, right = points[wave * 2 + 1].position;
-                    foreach (float x in new[] { left.x, right.x, (left.x + right.x) / 2f })
-                    {
-                        stage.player.transform.position = new Vector2(x, 0f);
-                        Vector2 expected = Mathf.Abs(x - left.x) >= Mathf.Abs(x - right.x) ? left : right;
-                        var actual = (Vector2)choose.Invoke(stage, new object[] { wave == 1 });
-                        if (actual != expected) throw new Exception("출현 위치는 편집된 마커 중 먼 쪽을 선택하고 높이를 유지해야 한다.");
-                    }
+                    stage.player.transform.position = new Vector2(x,10);
+                    var point = (Vector2)choose.Invoke(stage,null);
+                    if(point.y != stage.mapEntry.position.y || point.x > 42 || point.x != Mathf.Min(x+stage.spawnAheadDistance,42))
+                        throw new Exception("적은 플레이어 앞쪽 지면의 맵 내부에 출현해야 한다.");
+                    if((bool)valid.Invoke(stage,new object[]{point}) != (point.x-x >= stage.minimumSpawnDistance))
+                        throw new Exception("출구 근처/출현 지점 접근 시 출현을 보류해야 한다.");
                 }
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
@@ -124,6 +117,19 @@ namespace FishingPrototype.Editor
             if (!Physics2D.GetIgnoreCollision(heldCollider, playerCollider))
                 throw new Exception("되던진 수리검의 플레이어 충돌 제외는 유지되어야 한다");
             UnityEngine.Object.DestroyImmediate(heldObject);
+            foreach (var name in new[] { "Rock", "Bottle" })
+            {
+                var passThroughProp = UnityEngine.Object.Instantiate(CombatSceneBuilder.Prefab(name));
+                var propBody = passThroughProp.GetComponent<HookableBody>();
+                typeof(HookableBody).GetMethod("Start", flags).Invoke(propBody, null);
+                var collider = passThroughProp.GetComponent<Collider2D>();
+                if (propBody.blocksPlayerMovement || !Physics2D.GetIgnoreCollision(collider, playerCollider))
+                    throw new Exception("돌과 호리병은 플레이어 이동을 막으면 안 된다.");
+                propBody.SetHooked(true); propBody.SetHooked(false);
+                if (!Physics2D.GetIgnoreCollision(collider, playerCollider) || collider.isTrigger || !propBody.canCatch)
+                    throw new Exception("오브젝트를 놓아도 이동 통과와 포획·물리 판정을 유지해야 한다.");
+                UnityEngine.Object.DestroyImmediate(passThroughProp);
+            }
             UnityEngine.Object.DestroyImmediate(playerObject);
             EnemyCombatChecks.Run();
             var smokeEnemy = new GameObject("Test_반격연기검사적");

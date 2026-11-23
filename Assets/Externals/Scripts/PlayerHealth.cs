@@ -34,6 +34,7 @@ namespace FishingPrototype
 
         public void SetCheckpoint(Vector2 point) => checkpoint = point;
         public void Heal() { Health = maxHealth;  }
+        public void RestoreHealth(float value) => Health = Mathf.Clamp(value, 0, maxHealth);
 
         public void ReceiveDamage(float damage, Vector2 knockback)
         {

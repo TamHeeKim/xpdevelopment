@@ -22,6 +22,8 @@ namespace FishingPrototype
         [Header("포획 설정")]
         public CombatStatDefinition statDefinition;
         public bool canCatch = true;
+        [Tooltip("해제하면 플레이어의 이동만 통과시키고 지형·적 충돌은 유지합니다.")]
+        public bool blocksPlayerMovement = true;
         public bool breakOnSlam, breakOnThrow;
         public CircleCollider2D targetingCollider;
         public float Health => health;
@@ -54,6 +56,13 @@ namespace FishingPrototype
             health = maxHealth;
             spawnPosition = transform.position;
             spawnRotation = transform.rotation;
+        }
+
+        private void Start()
+        {
+            if (blocksPlayerMovement) return;
+            var player = FindFirstObjectByType<PlayerController>();
+            if (player) Physics2D.IgnoreCollision(GetComponent<Collider2D>(), player.GetComponent<Collider2D>(), true);
         }
 
         public void SetHooked(bool value)

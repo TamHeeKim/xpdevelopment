@@ -23,23 +23,17 @@ hud.help_body,"A / D   이동       W   점프
 연결 중 좌클릭   포획 취소
 포획 후 좌클릭   지상 내려찍기 / 우클릭   던지기
 수리검   우클릭 즉시 포획 → 좌클릭·우클릭 투척
-F   저장·회복 / F9   불러오기 / R   재시작",
+오른쪽 끝   다음 맵 / R   현재 맵 재시작",
 status.hooked_suffix,  [포획 중],
-objective.start,시작 지점·첫 전투 다음 휴식 구간에서 F: 저장·회복  |  F9: 불러오기,
-objective.saved,저장·회복 완료  |  오른쪽으로 이동하세요,
-objective.first_clear,첫 번째 전투 완료  |  오른쪽 휴식 구간에서 F: 저장·회복,
-objective.complete,구간 완료  |  R: 저장 지점부터 다시 시작,
-objective.retry,재도전  |  오른쪽으로 이동하세요,
-wave.first,첫 번째 전투,
-wave.second,두 번째 전투,
 hud.poison,중독 · 이동속도 감소   {0:0.0}초,
 hud.held,포획 중  ·  {0},
 hud.equipped,장착  ·  {0},
 hud.help_toggle,H  조작 안내 {0},
 health.value,체력  {0} / {1},
-wave.approach_count,{0} · 적 접근 중  {1}/{2},
-wave.remaining_count,{0} · 남은 적 {1},
 hud.health_value,{0} / {1},{0} / {1}
 enemy.poison,독가스병,
 enemy.shuriken,수리검병,
 hud.capture_controls,좌클릭: 포획 취소  /  다시 우클릭: 당기기,
+road.progress,맵 {0} · 오른쪽으로 계속 이동  |  주변 적 {1}명,
+road.transition,다음 맵으로 이동 중…,
+road.next,다음 맵 →,
