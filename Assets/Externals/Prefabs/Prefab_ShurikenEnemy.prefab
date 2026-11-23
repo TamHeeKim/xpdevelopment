@@ -1440,6 +1440,7 @@ MonoBehaviour:
   respawnOnDeath: 0
   statDefinition: {fileID: 11400000, guid: ddb163a5dd7b25441858538fa42272b0, type: 2}
   canCatch: 1
+  blocksPlayerMovement: 0
   breakOnSlam: 0
   breakOnThrow: 0
   targetingCollider: {fileID: 3052290844711743698}

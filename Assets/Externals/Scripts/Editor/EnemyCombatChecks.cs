@@ -141,11 +141,14 @@ namespace FishingPrototype.Editor
                     var actor = Actor(prefab, root.transform, player.Body.position + Vector2.right * 3);
                     var ai = actor.GetComponent<TangEnemyAI>(); ai.player = player; Call(ai, "Start");
                     Check(ai.model && actor.transform.localScale.z > 0, "적 모델 연결과 Z 스케일");
+                    Call(actor, "Start");
+                    Check(!actor.blocksPlayerMovement && Physics2D.GetIgnoreCollision(actor.GetComponent<Collider2D>(), player.GetComponent<Collider2D>()), "적과 플레이어는 몸으로 서로 밀면 안 된다.");
                     var mesh = ai.model.GetComponentInChildren<SkinnedMeshRenderer>();
                     Check(mesh && ai.model.GetComponentsInChildren<Collider>().Length == 0, "적 3D 외형은 충돌을 추가하지 않아야 한다.");
                     Call(ai, "FacePlayer");
                     Check(Quaternion.Angle(ai.model.localRotation, Quaternion.Euler(0,180,0)) < .1f, "적 모델 좌향 회전");
                     actor.SetHooked(true); Check(mesh.enabled, "포획해도 모델을 유지해야 한다."); actor.SetHooked(false);
+                    Check(Physics2D.GetIgnoreCollision(actor.GetComponent<Collider2D>(), player.GetComponent<Collider2D>()), "적 포획 해제 후에도 몸 충돌을 제외해야 한다.");
                     var flash = (System.Collections.IEnumerator)typeof(HookableBody).GetMethod("Flash", flags).Invoke(actor, null);
                     flash.MoveNext(); Check(!mesh.enabled, "적 모델 피격 표시");
                     flash.MoveNext(); Check(mesh.enabled, "적 모델 피격 표시 복구");
