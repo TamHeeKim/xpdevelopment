@@ -27,10 +27,9 @@ namespace FishingPrototype
             poisonPanel.SetActive(poison && poison.until > Time.time);
             if (poisonPanel.activeSelf) poisonText.text = CombatText.Format("hud.poison", poison.until - Time.time);
             objectiveText.text = stage.ObjectiveText;
-            capturePanel.SetActive(rod.CaptureProgress > 0f);
-            captureFill.fillAmount = rod.CaptureProgress;
+            capturePanel.SetActive(false);
             heldText.text = rod.HeldName != "" ? CombatText.Format("hud.held", rod.HeldName) : CombatText.Format("hud.equipped", rod.EquipmentName);
-            controlsText.text = CombatText.Get(rod.HeldName != "" ? "hud.held_controls" : "hud.attack_controls");
+            controlsText.text = CombatText.Get(rod.CapturePending ? "hud.capture_controls" : rod.HeldName != "" ? "hud.held_controls" : "hud.attack_controls");
             helpToggleText.text = CombatText.Format("hud.help_toggle", CombatText.Get(help ? "ui.close" : "ui.open"));
         }
     }
